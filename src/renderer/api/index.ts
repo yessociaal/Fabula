@@ -1,9 +1,10 @@
+import type { Api } from '@shared/ipc'
 import { browserMock } from './browserMock'
 
 declare global {
   interface Window {
-    api?: Record<string, unknown>
+    api?: Api
   }
 }
 
-export const api = window.api ?? browserMock
+export const api: Api = window.api ?? browserMock

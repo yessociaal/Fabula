@@ -1,5 +1,10 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'node:path'
+import { registerIpc } from './ipc'
+import { registerAssetProtocolHandler, registerAssetScheme } from './protocol'
+
+// Must happen before the app is ready.
+registerAssetScheme()
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -28,6 +33,8 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  registerAssetProtocolHandler()
+  registerIpc()
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

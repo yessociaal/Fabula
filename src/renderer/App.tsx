@@ -1,21 +1,21 @@
+import { useEffect } from 'react'
+import { ToastHost } from './components/Toast'
+import { startAutosave } from './store/autosave'
+import { useProjectStore } from './store/projectStore'
+import Home from './views/Home/Home'
+import Shell from './views/Shell/Shell'
+
 export default function App() {
+  const open = useProjectStore((s) => s.project !== null)
+
+  useEffect(() => {
+    startAutosave()
+  }, [])
+
   return (
-    <main className="home">
-      <h1 className="home-title">Fabula</h1>
-
-      <div className="home-actions">
-        <button type="button" title="Create a new story">+ New story</button>
-        <button type="button" title="Open an existing story">Open story…</button>
-      </div>
-
-      <section>
-        <h2 className="home-section-title">Recent</h2>
-        <p className="home-empty">No stories yet. Create one to get started.</p>
-      </section>
-
-      <div className="home-sdk">
-        <span>Ren'Py SDK: not set</span>
-      </div>
-    </main>
+    <>
+      {open ? <Shell /> : <Home />}
+      <ToastHost />
+    </>
   )
 }
