@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   AlertTriangle,
-  ArrowLeft,
   Download,
   Home as HomeIcon,
   Map as MapIcon,
@@ -24,6 +23,7 @@ import { useUiStore, type View } from '../../store/uiStore'
 import { useStore } from 'zustand'
 import Assets from '../Assets/Assets'
 import Characters from '../Characters/Characters'
+import SceneEditor from '../SceneEditor/SceneEditor'
 import StoryMap from '../StoryMap/StoryMap'
 import Variables from '../Variables/Variables'
 
@@ -107,6 +107,7 @@ export default function Shell() {
   const problems = validateProject(project)
   const errors = problems.filter((p) => p.severity === 'error').length
   const count = problems.length
+  const active = (v: View): boolean => view === v || (v === 'map' && view === 'scene')
   const current = RAIL.find((r) => r.view === view) ?? RAIL[0]
 
   const goHome = async () => {
@@ -154,9 +155,9 @@ export default function Shell() {
             <button
               key={r.view}
               type="button"
-              className={`rail-item ${view === r.view ? 'active' : ''}`}
+              className={`rail-item ${active(r.view) ? 'active' : ''}`}
               title={r.label}
-              aria-current={view === r.view ? 'page' : undefined}
+              aria-current={active(r.view) ? 'page' : undefined}
               onClick={() => setView(r.view)}
             >
               {r.icon}
@@ -174,13 +175,7 @@ export default function Shell() {
           ) : view === 'map' ? (
             <StoryMap />
           ) : view === 'scene' ? (
-            <EmptyState icon={<MapIcon size={20} />} title="Scene Editor">
-              The Scene Editor arrives in a later step.
-              <br />
-              <Button onClick={() => setView('map')} icon={<ArrowLeft size={16} />}>
-                Back to Story Map
-              </Button>
-            </EmptyState>
+            <SceneEditor />
           ) : (
             <EmptyState icon={current.icon} title={current.label}>
               {current.empty}
