@@ -1,0 +1,204 @@
+.stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  container-type: inline-size;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  user-select: none;
+}
+
+.stage-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.stage-missing {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 4px;
+  font-size: max(10px, 1.6cqw);
+  color: #c9cdd6;
+  border: 1px dashed #9aa0ad;
+  background: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.stage-bg.stage-missing {
+  position: absolute;
+  inset: 0;
+}
+
+.stage-checker {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: start center;
+  padding-top: 3cqw;
+  background-color: #2b2e36;
+  background-image:
+    linear-gradient(45deg, #3a3e48 25%, transparent 25%, transparent 75%, #3a3e48 75%),
+    linear-gradient(45deg, #3a3e48 25%, transparent 25%, transparent 75%, #3a3e48 75%);
+  background-size: 24px 24px;
+  background-position:
+    0 0,
+    12px 12px;
+}
+
+.stage-checker span {
+  font-size: max(10px, 1.7cqw);
+  color: #c9cdd6;
+  background: rgba(22, 23, 27, 0.8);
+  padding: 2px 8px;
+  border-radius: 4px;
+  height: fit-content;
+}
+
+.stage-sprite {
+  position: absolute;
+  bottom: 0;
+  height: 90%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.stage-sprite-left {
+  left: 4%;
+}
+
+.stage-sprite-right {
+  right: 4%;
+}
+
+.stage-sprite-center {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.stage-sprite-art {
+  max-height: 100%;
+  max-width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom;
+}
+
+.stage-sprite-art.stage-missing {
+  width: 18cqw;
+}
+
+.stage-music {
+  position: absolute;
+  top: 1.5cqw;
+  right: 1.5cqw;
+  max-width: 40%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: max(10px, 1.5cqw);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.stage-music span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stage-dialogue {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  bottom: 3%;
+  min-height: 22%;
+  padding: 1.6cqw 2.4cqw;
+  border-radius: 6px;
+  background: rgba(10, 11, 16, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: max(10px, 2.2cqw);
+  line-height: 1.4;
+}
+
+.stage-speaker {
+  font-weight: 700;
+  margin-bottom: 0.3em;
+}
+
+.stage-text {
+  overflow-wrap: anywhere;
+}
+
+.rt-b {
+  font-weight: 700;
+}
+
+.rt-i {
+  font-style: italic;
+}
+
+.rt-u {
+  text-decoration: underline;
+}
+
+.stage-menu {
+  position: absolute;
+  inset: 0 0 28% 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2cqw;
+  padding: 0 10%;
+}
+
+.stage-choice {
+  min-width: 40%;
+  max-width: 100%;
+  padding: 1cqw 2.4cqw;
+  font: inherit;
+  font-size: max(11px, 2.1cqw);
+  color: #fff;
+  text-align: center;
+  background: rgba(10, 11, 16, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.stage-choice:hover,
+.stage-choice:focus-visible {
+  background: rgba(124, 156, 255, 0.45);
+  border-color: #fff;
+}
+
+.stage-choice-key {
+  display: inline-block;
+  margin-right: 0.8em;
+  opacity: 0.7;
+  font-size: 0.8em;
+}
+
+/* Quick play: 300 ms fade-in for whatever just appeared. */
+.stage-fade .stage-bg,
+.stage-fade .stage-sprite,
+.stage-fade .stage-checker {
+  animation: stage-fade-in 300ms ease-out;
+}
+
+@keyframes stage-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

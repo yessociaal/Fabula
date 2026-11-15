@@ -91,7 +91,7 @@ export function SceneBar({ scene }: { scene: Scene }) {
           Copy script
         </Button>
       )}
-      <Button icon={<Play size={16} />} disabled title="Available in a later step">
+      <Button icon={<Play size={16} />} onClick={() => useUiStore.getState().startPlaytest(scene.id)} title="Quick play this story starting at this scene">
         Play from here
       </Button>
       <IconButton

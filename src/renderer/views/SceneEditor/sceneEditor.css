@@ -368,18 +368,12 @@
   background: var(--panel);
 }
 
-.stage-slot {
+.stage-preview {
   flex: none;
   margin: 12px;
-  aspect-ratio: 16 / 9;
-  display: grid;
-  place-items: center;
-  text-align: center;
-  padding: 12px;
-  color: var(--muted);
-  border: 1px dashed var(--line);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--bg);
+  overflow: hidden;
 }
 
 .inspector {

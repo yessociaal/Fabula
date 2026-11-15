@@ -21,6 +21,7 @@ import { addEntryAt } from './blockActions'
 import { BlockList, LIST_END_ID } from './BlockList'
 import type { PaletteEntry } from './blockMeta'
 import { dropInsertIndex } from './editorHelpers'
+import { EditorStage } from './EditorStage'
 import { EndingPanel } from './EndingPanel/EndingPanel'
 import { Inspector } from './Inspector/Inspector'
 import { Palette, PaletteGhost } from './Palette'
@@ -84,9 +85,7 @@ function Editor({ scene }: { scene: Scene }) {
           <DragOverlay dropAnimation={null}>{activeEntry ? <PaletteGhost entry={activeEntry} /> : null}</DragOverlay>
         </DndContext>
         <aside className="scene-side">
-          <div className="stage-slot" role="img" aria-label="Stage preview placeholder">
-            Stage preview arrives in a later step
-          </div>
+          <EditorStage scene={scene} />
           <Inspector sceneId={scene.id} />
         </aside>
       </div>

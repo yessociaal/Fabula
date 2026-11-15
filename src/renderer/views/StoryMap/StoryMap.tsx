@@ -76,7 +76,7 @@ function MapCanvas() {
         title: project.chapterOrder.length === 0 ? 'Use + Chapter on the toolbar to create chapters' : undefined
       },
       { separator: true },
-      { label: 'Play from here (Quick play)', disabled: true, title: later },
+      { label: 'Play from here (Quick play)', onSelect: () => useUiStore.getState().startPlaytest(scene.id) },
       { label: "Play from here in Ren'Py", disabled: true, title: later },
       { separator: true },
       {

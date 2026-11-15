@@ -3,6 +3,7 @@ import { ToastHost } from './components/Toast'
 import { startAutosave } from './store/autosave'
 import { useProjectStore } from './store/projectStore'
 import Home from './views/Home/Home'
+import Playtest from './views/Playtest/Playtest'
 import Shell from './views/Shell/Shell'
 
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
   return (
     <>
       {open ? <Shell /> : <Home />}
+      {open && <Playtest />}
       <ToastHost />
     </>
   )

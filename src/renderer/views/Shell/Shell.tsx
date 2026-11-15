@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { validateProject } from '@shared/validate'
 import { Button } from '../../components/Button'
+import { toast } from '../../components/Toast'
 import { EmptyState } from '../../components/EmptyState'
 import { IconButton } from '../../components/IconButton'
 import { closeProject } from '../../openProject'
@@ -110,6 +111,14 @@ export default function Shell() {
   const active = (v: View): boolean => view === v || (v === 'map' && view === 'scene')
   const current = RAIL.find((r) => r.view === view) ?? RAIL[0]
 
+  const quickPlay = () => {
+    if (!project.startSceneId || !project.scenes[project.startSceneId]) {
+      toast('Set a start scene first: right-click a scene on the map and choose Set as start.', 'error')
+      return
+    }
+    useUiStore.getState().startPlaytest(project.startSceneId)
+  }
+
   const goHome = async () => {
     await flushAutosave()
     closeProject()
@@ -142,8 +151,11 @@ export default function Shell() {
         >
           {count === 1 ? '1 problem' : `${count} problems`}
         </Button>
+        <Button icon={<Play size={16} />} onClick={quickPlay} title="Play the story in the editor, from the start scene">
+          Quick play
+        </Button>
         <Button icon={<Play size={16} />} disabled title="Available in a later step">
-          Play
+          Play in Ren'Py
         </Button>
         <Button icon={<Download size={16} />} disabled title="Available in a later step">
           Export
