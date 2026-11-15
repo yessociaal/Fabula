@@ -54,3 +54,30 @@ export function conditionToPython(condition: Condition, nameOf: (variableId: Id)
   if (parts.length === 0) return 'True'
   return parts.join(condition.join === 'and' ? ' and ' : ' or ')
 }
+
+const WORDS: Record<Clause['op'], string> = {
+  eq: 'is',
+  neq: 'is not',
+  gt: 'is more than',
+  gte: 'is at least',
+  lt: 'is less than',
+  lte: 'is at most'
+}
+
+function valueInWords(value: Scalar): string {
+  return typeof value === 'string' ? `"${value}"` : String(value)
+}
+
+/** A condition as plain English for the map, e.g. `has_key and courage is at least 3`. Clauses with no variable are skipped; nothing usable gives "Always". */
+export function conditionToWords(condition: Condition, nameOf: (variableId: Id) => string): string {
+  const parts: string[] = []
+  for (const c of condition.clauses) {
+    if (c.variableId === null) continue
+    const name = nameOf(c.variableId)
+    if (c.op === 'eq' && c.value === true) parts.push(name)
+    else if (c.op === 'eq' && c.value === false) parts.push(`not ${name}`)
+    else parts.push(`${name} ${WORDS[c.op]} ${valueInWords(c.value)}`)
+  }
+  if (parts.length === 0) return 'Always'
+  return parts.join(condition.join === 'and' ? ' and ' : ' or ')
+}

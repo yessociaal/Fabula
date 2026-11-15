@@ -51,6 +51,8 @@ export interface ProjectState {
   moveScenes(positions: Record<Id, Position>): void
   deleteScenes(ids: Id[]): void
   duplicateScene(sceneId: Id): Id | null
+  /** Add scenes made by `pasteScenes` (they already have fresh ids). One undo step. Returns their ids. */
+  addScenes(scenes: Scene[]): Id[]
   setStartScene(sceneId: Id | null): void
   setSceneChapter(sceneId: Id, chapterId: Id | null): void
 
@@ -240,6 +242,12 @@ export const useProjectStore = create<ProjectState>()(
             p.scenes[copy.id] = copy
           })
           return copy.id
+        },
+        addScenes(scenes) {
+          mutate((p) => {
+            for (const sc of scenes) p.scenes[sc.id] = JSON.parse(JSON.stringify(sc)) as Scene
+          })
+          return scenes.map((sc) => sc.id)
         },
         setStartScene(sceneId) {
           mutate((p) => {

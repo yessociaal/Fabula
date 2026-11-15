@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   AlertTriangle,
+  ArrowLeft,
   Download,
   Home as HomeIcon,
   Map as MapIcon,
@@ -23,6 +24,7 @@ import { useUiStore, type View } from '../../store/uiStore'
 import { useStore } from 'zustand'
 import Assets from '../Assets/Assets'
 import Characters from '../Characters/Characters'
+import StoryMap from '../StoryMap/StoryMap'
 import Variables from '../Variables/Variables'
 
 const RAIL: { view: View; label: string; icon: ReactNode; empty: string }[] = [
@@ -169,6 +171,16 @@ export default function Shell() {
             <Assets />
           ) : view === 'variables' ? (
             <Variables />
+          ) : view === 'map' ? (
+            <StoryMap />
+          ) : view === 'scene' ? (
+            <EmptyState icon={<MapIcon size={20} />} title="Scene Editor">
+              The Scene Editor arrives in a later step.
+              <br />
+              <Button onClick={() => setView('map')} icon={<ArrowLeft size={16} />}>
+                Back to Story Map
+              </Button>
+            </EmptyState>
           ) : (
             <EmptyState icon={current.icon} title={current.label}>
               {current.empty}
