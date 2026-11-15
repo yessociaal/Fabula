@@ -49,3 +49,9 @@ export function checkAssetExtension(kind: AssetKind, fileName: string): string {
   }
   return ext
 }
+
+/** Default asset name for an uploaded file: the file name without its folder and extension. */
+export function assetNameFromFile(fileName: string): string {
+  const base = fileName.split(/[\\/]/).pop() ?? fileName
+  return base.replace(/\.[^.]*$/, '').trim() || 'Untitled'
+}

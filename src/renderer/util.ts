@@ -16,3 +16,15 @@ export function relativeTime(timestamp: number, now: number = Date.now()): strin
   if (months < 12) return months === 1 ? 'last month' : `${months} months ago`
   return 'over a year ago'
 }
+
+/** 75.2 seconds -> "1:15". Unknown or invalid durations give "–". */
+export function formatDuration(seconds: number | null | undefined): string {
+  if (seconds === null || seconds === undefined || !Number.isFinite(seconds) || seconds < 0) return '–'
+  const total = Math.round(seconds)
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`
+}
+
+/** "1 place" / "5 places" */
+export function plural(n: number, one: string, many: string = `${one}s`): string {
+  return n === 1 ? `1 ${one}` : `${n} ${many}`
+}

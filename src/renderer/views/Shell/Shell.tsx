@@ -21,6 +21,9 @@ import { flushAutosave, useSaveStatus } from '../../store/autosave'
 import { redo, undo, useProjectStore } from '../../store/projectStore'
 import { useUiStore, type View } from '../../store/uiStore'
 import { useStore } from 'zustand'
+import Assets from '../Assets/Assets'
+import Characters from '../Characters/Characters'
+import Variables from '../Variables/Variables'
 
 const RAIL: { view: View; label: string; icon: ReactNode; empty: string }[] = [
   { view: 'map', label: 'Story Map', icon: <MapIcon size={20} />, empty: 'The story map arrives in a later step.' },
@@ -160,9 +163,17 @@ export default function Shell() {
           ))}
         </nav>
         <section className="view">
-          <EmptyState icon={current.icon} title={current.label}>
-            {current.empty}
-          </EmptyState>
+          {view === 'characters' ? (
+            <Characters />
+          ) : view === 'assets' ? (
+            <Assets />
+          ) : view === 'variables' ? (
+            <Variables />
+          ) : (
+            <EmptyState icon={current.icon} title={current.label}>
+              {current.empty}
+            </EmptyState>
+          )}
         </section>
       </div>
     </div>

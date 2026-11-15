@@ -80,10 +80,14 @@ export interface ProjectState {
 
   addVariable(init?: Partial<Omit<Variable, 'id'>>): Id
   updateVariable(variableId: Id, patch: Patch<Variable>): void
+  /** Change a variable's type: resets its starting value and every value that was compared with or assigned to it. */
+  changeVariableType(variableId: Id, type: Variable['type']): void
   deleteVariable(variableId: Id): void
 
   addAsset(asset: Asset): Id
   renameAsset(assetId: Id, name: string): void
+  /** Swap the file behind an asset while keeping its id (and so every place that uses it). */
+  replaceAssetFile(assetId: Id, patch: Pick<Asset, 'file' | 'width' | 'height' | 'bytes'>): void
   deleteAsset(assetId: Id): void
 
   addChapter(name?: string, color?: string): Id
@@ -463,6 +467,28 @@ export const useProjectStore = create<ProjectState>()(
             }
           })
         },
+        changeVariableType(variableId, type) {
+          mutate((p) => {
+            const v = p.variables[variableId]
+            if (!v || v.type === type) return
+            v.type = type
+            v.defaultValue = defaultValueFor(type)
+            forEachCondition(p, (c) => {
+              for (const cl of c.clauses) {
+                if (cl.variableId !== variableId) continue
+                cl.value = defaultValueFor(type)
+                if (type !== 'number' && cl.op !== 'eq' && cl.op !== 'neq') cl.op = 'eq'
+              }
+            })
+            forEachEffect(p, (e) => {
+              if (e.variableId !== variableId) return
+              e.value = defaultValueFor(type)
+              if (type === 'boolean' && (e.op === 'add' || e.op === 'subtract')) e.op = 'set'
+              if (type === 'number' && e.op === 'toggle') e.op = 'set'
+              if (type === 'text' && e.op !== 'set') e.op = 'set'
+            })
+          })
+        },
         deleteVariable(variableId) {
           mutate((p) => {
             forEachCondition(p, (c) => {
@@ -495,6 +521,16 @@ export const useProjectStore = create<ProjectState>()(
           mutate((p) => {
             const a = p.assets[assetId]
             if (a) a.name = name
+          })
+        },
+        replaceAssetFile(assetId, patch) {
+          mutate((p) => {
+            const a = p.assets[assetId]
+            if (!a) return
+            a.file = patch.file
+            a.width = patch.width
+            a.height = patch.height
+            a.bytes = patch.bytes
           })
         },
         deleteAsset(assetId) {

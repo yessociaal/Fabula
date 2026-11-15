@@ -490,3 +490,59 @@ describe('uiStore', () => {
     expect(useUiStore.getState().view).toBe('characters')
   })
 })
+
+describe('replaceAssetFile', () => {
+  it('swaps the file and size but keeps the id, name and every reference', () => {
+    const a = createAsset('background', 'Forest', 'backgrounds/old.png', { width: 10, height: 10, bytes: 5 })
+    S().addAsset(a)
+    const sceneId = S().addScene({ x: 0, y: 0 })
+    const blockId = S().addBlock(sceneId, 'background')!
+    S().updateBlock(sceneId, blockId, { assetId: a.id })
+    S().replaceAssetFile(a.id, { file: 'backgrounds/new.jpg', width: 20, height: 30, bytes: 99 })
+    expect(P().assets[a.id]).toEqual({ ...a, file: 'backgrounds/new.jpg', width: 20, height: 30, bytes: 99 })
+    const b = P().scenes[sceneId].blocks[0]
+    expect(b.type === 'background' && b.assetId).toBe(a.id)
+  })
+
+  it('is one undo step and ignores unknown ids', () => {
+    const a = createAsset('sprite', 'S', 'sprites/o.png')
+    S().addAsset(a)
+    const before = snap()
+    S().replaceAssetFile(a.id, { file: 'sprites/n.png', width: 1, height: 1, bytes: 1 })
+    undo()
+    expect(snap()).toEqual(before)
+    S().replaceAssetFile('missing', { file: 'x', width: null, height: null, bytes: 0 })
+    expect(snap()).toEqual(before)
+  })
+})
+
+describe('changeVariableType', () => {
+  it('resets the starting value and every value and operator that no longer fits', () => {
+    const v = createVariable('courage', 'number')
+    const vid = S().addVariable({ ...v, defaultValue: 7 })
+    const sceneId = S().addScene({ x: 0, y: 0 })
+    const blockId = S().addBlock(sceneId, 'setVariable')!
+    S().updateBlock(sceneId, blockId, { effect: { variableId: vid, op: 'add', value: 3 } })
+    S().setEndingType(sceneId, 'branch')
+    const caseId = S().addCase(sceneId)!
+    S().updateCase(sceneId, caseId, {
+      condition: { join: 'and', clauses: [{ id: 'c1', variableId: vid, op: 'gt', value: 5 }] }
+    })
+    S().changeVariableType(vid, 'boolean')
+    expect(P().variables[vid].type).toBe('boolean')
+    expect(P().variables[vid].defaultValue).toBe(false)
+    const blk = P().scenes[sceneId].blocks[0]
+    expect(blk.type === 'setVariable' && blk.effect).toEqual({ variableId: vid, op: 'set', value: false })
+    const end = P().scenes[sceneId].ending
+    expect(end.type === 'branch' && end.cases.find((c) => c.id === caseId)!.condition.clauses[0]).toMatchObject({
+      op: 'eq',
+      value: false
+    })
+  })
+
+  it('does nothing when the type is unchanged', () => {
+    const vid = S().addVariable({ name: 'x', type: 'text', defaultValue: 'hi' })
+    S().changeVariableType(vid, 'text')
+    expect(P().variables[vid].defaultValue).toBe('hi')
+  })
+})
