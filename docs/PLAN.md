@@ -415,6 +415,7 @@ Defensive rule: any block or exit that points at something missing (null or dele
 3. newline → `\n` (the two characters)
 4. `[`: if the text at this point matches `[name]` where `name` is in `knownVariableNames`, keep it (this is how "Insert variable" works). Otherwise emit `[[`.
 5. `{`: if it starts one of `{b} {/b} {i} {/i} {u} {/u}`, keep it. Otherwise emit `{{`.
+6. `%` → `%%` (Ren'Py 8.4.1 lint rejects a lone `%` in dialogue; verified in Phase 3). Character names in `Character("…")` are not covered by this; check them with lint if a name contains `%`.
 
 `pythonString(s)`: steps 1–3 only, wrapped in double quotes. Used for `Character("…")` and text variable values.
 

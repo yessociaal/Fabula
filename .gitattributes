@@ -1,0 +1,2 @@
+tests/golden/*.rpy text eol=lf
+tests/fixtures/*.json text eol=lf

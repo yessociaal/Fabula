@@ -1,4 +1,5 @@
 import type { Clause, Condition, Id, Scalar } from './model'
+import { pythonValue } from './compiler/text'
 
 export type VariableValues = Record<Id, Scalar>
 
@@ -40,12 +41,6 @@ const OPS: Record<Clause['op'], string> = {
   lte: '<='
 }
 
-function pyValue(v: Scalar): string {
-  if (typeof v === 'boolean') return v ? 'True' : 'False'
-  if (typeof v === 'number') return String(v)
-  return `"${v.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`
-}
-
 /** Clauses without a variable are skipped (defensive). No usable clause gives "True". */
 export function conditionToPython(condition: Condition, nameOf: (variableId: Id) => string): string {
   const parts: string[] = []
@@ -54,7 +49,7 @@ export function conditionToPython(condition: Condition, nameOf: (variableId: Id)
     const name = nameOf(c.variableId)
     if (c.op === 'eq' && c.value === true) parts.push(name)
     else if (c.op === 'eq' && c.value === false) parts.push(`not ${name}`)
-    else parts.push(`${name} ${OPS[c.op]} ${pyValue(c.value)}`)
+    else parts.push(`${name} ${OPS[c.op]} ${pythonValue(c.value)}`)
   }
   if (parts.length === 0) return 'True'
   return parts.join(condition.join === 'and' ? ' and ' : ' or ')

@@ -1,0 +1,61 @@
+import type { Ending, Id } from '../model'
+import { conditionPython, emitEffect, sayText } from './blocks'
+import type { CompileContext } from './blocks'
+
+const IND = '    '
+
+function jumpLine(target: Id | null, ctx: CompileContext): string {
+  if (target === null || !ctx.project.scenes[target]) return 'return'
+  const label = ctx.names.sceneLabels[target]
+  return label === undefined ? 'return' : `jump ${label}`
+}
+
+function promptLine(prompt: { characterId: Id | null; text: string }, ctx: CompileContext): string | null {
+  if (prompt.characterId === null) return sayText(prompt.text, ctx)
+  const tag = ctx.names.characters[prompt.characterId]
+  return tag === undefined ? null : `${tag} ${sayText(prompt.text, ctx)}`
+}
+
+/** One statement (possibly several lines, already indented) for the scene ending, or null for extended endings. */
+export function emitEnding(ending: Ending, ctx: CompileContext): string | null {
+  switch (ending.type) {
+    case 'jump':
+      return `${IND}${jumpLine(ending.target, ctx)}`
+    case 'end':
+      return `${IND}return`
+    case 'choice': {
+      if (ending.options.length === 0) return `${IND}return`
+      const items: string[] = []
+      if (ending.prompt) {
+        const line = promptLine(ending.prompt, ctx)
+        if (line !== null) items.push(`${IND}${IND}${line}`)
+      }
+      for (const option of ending.options) {
+        const guard = option.condition ? ` if ${conditionPython(option.condition, ctx)}` : ''
+        const body: string[] = []
+        for (const effect of option.effects) {
+          const line = emitEffect(effect, ctx)
+          if (line !== null) body.push(`${IND}${IND}${IND}${line}`)
+        }
+        body.push(`${IND}${IND}${IND}${jumpLine(option.target, ctx)}`)
+        items.push([`${IND}${IND}${sayText(option.text, ctx)}${guard}:`, ...body].join('\n'))
+      }
+      let out = [`${IND}menu:`, ...items].join('\n\n')
+      if (ending.options.every((o) => o.condition !== null)) out += `\n\n${IND}return`
+      return out
+    }
+    case 'branch': {
+      if (ending.cases.length === 0) return `${IND}${jumpLine(ending.elseTarget, ctx)}`
+      const lines: string[] = []
+      ending.cases.forEach((c, i) => {
+        lines.push(`${IND}${i === 0 ? 'if' : 'elif'} ${conditionPython(c.condition, ctx)}:`)
+        lines.push(`${IND}${IND}${jumpLine(c.target, ctx)}`)
+      })
+      lines.push(`${IND}else:`)
+      lines.push(`${IND}${IND}${jumpLine(ending.elseTarget, ctx)}`)
+      return lines.join('\n')
+    }
+    default:
+      return null
+  }
+}

@@ -62,7 +62,7 @@ function unique(base: string, taken: Set<string>): string {
   return name
 }
 
-function sceneOrder(project: Project): Scene[] {
+export function sceneOrder(project: Project): Scene[] {
   const chapterIndex = (s: Scene): number => {
     if (s.chapterId === null) return -1
     const i = project.chapterOrder.indexOf(s.chapterId)

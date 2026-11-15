@@ -1,0 +1,807 @@
+{
+  "formatVersion": 1,
+  "meta": {
+    "title": "Demo Story",
+    "width": 1280,
+    "height": 720,
+    "accentColor": "#7c9cff"
+  },
+  "renpyProjectDir": null,
+  "startSceneId": "s_start",
+  "scenes": {
+    "s_start": {
+      "id": "s_start",
+      "name": "Start",
+      "notes": "Private note",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "chapterId": null,
+      "blocks": [
+        {
+          "id": "b01",
+          "type": "background",
+          "assetId": "a_forest",
+          "transition": "fade"
+        },
+        {
+          "id": "b02",
+          "type": "background",
+          "assetId": null,
+          "transition": "none"
+        },
+        {
+          "id": "b03",
+          "type": "background",
+          "assetId": "a_gate",
+          "transition": "dissolve"
+        },
+        {
+          "id": "b04",
+          "type": "playMusic",
+          "assetId": "a_morning",
+          "fadeIn": 1.5,
+          "loop": true,
+          "channel": "music"
+        },
+        {
+          "id": "b05",
+          "type": "playMusic",
+          "assetId": "a_night",
+          "fadeIn": 0,
+          "loop": false,
+          "channel": "music"
+        },
+        {
+          "id": "b06",
+          "type": "playMusic",
+          "assetId": "a_morning",
+          "fadeIn": 2,
+          "loop": false,
+          "channel": "music"
+        },
+        {
+          "id": "b07",
+          "type": "show",
+          "characterId": "c_anna",
+          "expressionId": "e_happy",
+          "position": "center",
+          "transition": "dissolve",
+          "placement": {
+            "mode": "preset"
+          },
+          "zorder": 0
+        },
+        {
+          "id": "b08",
+          "type": "show",
+          "characterId": "c_left",
+          "expressionId": "e_smile",
+          "position": "right",
+          "transition": "none",
+          "placement": {
+            "mode": "preset"
+          },
+          "zorder": 0
+        },
+        {
+          "id": "b09",
+          "type": "show",
+          "characterId": "c_anna",
+          "expressionId": "e_sad",
+          "position": "left",
+          "transition": "none",
+          "placement": {
+            "mode": "preset"
+          },
+          "zorder": 0
+        },
+        {
+          "id": "b10",
+          "type": "say",
+          "characterId": "c_anna",
+          "text": "She said \"hi\" \\ back, [nickname] has [courage] and [bogus] {b}bold{/b} {size=20}small{/size} 100%\nSecond line.",
+          "voiceAssetId": null
+        },
+        {
+          "id": "b11",
+          "type": "say",
+          "characterId": null,
+          "text": "The path {i}splits{/i} {u}ahead{/u}.",
+          "voiceAssetId": null
+        },
+        {
+          "id": "b12",
+          "type": "say",
+          "characterId": "c_left",
+          "text": "I'm \"Left\".",
+          "voiceAssetId": null
+        },
+        {
+          "id": "b13",
+          "type": "hide",
+          "characterId": "c_left",
+          "transition": "fade"
+        },
+        {
+          "id": "b14",
+          "type": "hide",
+          "characterId": "c_anna",
+          "transition": "none"
+        },
+        {
+          "id": "b15",
+          "type": "playSound",
+          "assetId": "a_door"
+        },
+        {
+          "id": "b16",
+          "type": "setVariable",
+          "effect": {
+            "variableId": "v_courage",
+            "op": "set",
+            "value": 1
+          }
+        },
+        {
+          "id": "b17",
+          "type": "setVariable",
+          "effect": {
+            "variableId": "v_courage",
+            "op": "add",
+            "value": 2
+          }
+        },
+        {
+          "id": "b18",
+          "type": "setVariable",
+          "effect": {
+            "variableId": "v_courage",
+            "op": "subtract",
+            "value": 1
+          }
+        },
+        {
+          "id": "b19",
+          "type": "setVariable",
+          "effect": {
+            "variableId": "v_key",
+            "op": "toggle",
+            "value": true
+          }
+        },
+        {
+          "id": "b20",
+          "type": "setVariable",
+          "effect": {
+            "variableId": "v_nick",
+            "op": "set",
+            "value": "Bob \"B\""
+          }
+        },
+        {
+          "id": "b21",
+          "type": "setVariable",
+          "effect": {
+            "variableId": "v_key",
+            "op": "set",
+            "value": true
+          }
+        },
+        {
+          "id": "b22",
+          "type": "setVariable",
+          "effect": {
+            "variableId": "v_trust",
+            "op": "set",
+            "value": 2.5
+          }
+        },
+        {
+          "id": "b23",
+          "type": "setVariable",
+          "effect": {
+            "variableId": "v_trust",
+            "op": "add",
+            "value": 0.5
+          }
+        },
+        {
+          "id": "b24",
+          "type": "pause",
+          "seconds": null
+        },
+        {
+          "id": "b25",
+          "type": "pause",
+          "seconds": 2
+        },
+        {
+          "id": "b26",
+          "type": "pause",
+          "seconds": 1.5
+        },
+        {
+          "id": "b27",
+          "type": "transition",
+          "transition": "fade"
+        },
+        {
+          "id": "b28",
+          "type": "transition",
+          "transition": "none"
+        },
+        {
+          "id": "b29",
+          "type": "stopMusic",
+          "fadeOut": 2,
+          "channel": "music"
+        },
+        {
+          "id": "b30",
+          "type": "stopMusic",
+          "fadeOut": 0,
+          "channel": "music"
+        }
+      ],
+      "ending": {
+        "type": "choice",
+        "prompt": {
+          "characterId": "c_anna",
+          "text": "Which way, [nickname]?"
+        },
+        "options": [
+          {
+            "id": "o1",
+            "text": "Take the left path",
+            "condition": null,
+            "effects": [
+              {
+                "variableId": "v_courage",
+                "op": "add",
+                "value": 1
+              }
+            ],
+            "target": "s_left"
+          },
+          {
+            "id": "o2",
+            "text": "Use the key",
+            "condition": {
+              "join": "and",
+              "clauses": [
+                {
+                  "id": "k1",
+                  "variableId": "v_key",
+                  "op": "eq",
+                  "value": true
+                }
+              ]
+            },
+            "effects": [],
+            "target": "s_gate2"
+          },
+          {
+            "id": "o3",
+            "text": "Go \"secret\"",
+            "condition": {
+              "join": "and",
+              "clauses": [
+                {
+                  "id": "k2",
+                  "variableId": "v_courage",
+                  "op": "gte",
+                  "value": 3
+                },
+                {
+                  "id": "k3",
+                  "variableId": "v_nick",
+                  "op": "neq",
+                  "value": "Stranger"
+                }
+              ]
+            },
+            "effects": [],
+            "target": "s_secret"
+          }
+        ]
+      },
+      "labelLock": null,
+      "role": "normal"
+    },
+    "s_left": {
+      "id": "s_left",
+      "name": "Left path",
+      "notes": "Private note",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "chapterId": "ch_one",
+      "blocks": [
+        {
+          "id": "l1",
+          "type": "background",
+          "assetId": "a_forest",
+          "transition": "none"
+        },
+        {
+          "id": "l2",
+          "type": "say",
+          "characterId": "c_anna",
+          "text": "The trees close in.",
+          "voiceAssetId": null
+        }
+      ],
+      "ending": {
+        "type": "jump",
+        "target": "s_gate"
+      },
+      "labelLock": null,
+      "role": "normal"
+    },
+    "s_gate": {
+      "id": "s_gate",
+      "name": "Gate",
+      "notes": "Private note",
+      "position": {
+        "x": 0,
+        "y": 100
+      },
+      "chapterId": "ch_one",
+      "blocks": [
+        {
+          "id": "g1",
+          "type": "background",
+          "assetId": "a_gate",
+          "transition": "none"
+        },
+        {
+          "id": "g2",
+          "type": "say",
+          "characterId": null,
+          "text": "A locked gate.",
+          "voiceAssetId": null
+        }
+      ],
+      "ending": {
+        "type": "branch",
+        "cases": [
+          {
+            "id": "cs1",
+            "condition": {
+              "join": "and",
+              "clauses": [
+                {
+                  "id": "m1",
+                  "variableId": "v_key",
+                  "op": "eq",
+                  "value": false
+                }
+              ]
+            },
+            "target": "s_door"
+          },
+          {
+            "id": "cs2",
+            "condition": {
+              "join": "and",
+              "clauses": [
+                {
+                  "id": "m2",
+                  "variableId": "v_courage",
+                  "op": "lt",
+                  "value": 1
+                },
+                {
+                  "id": "m3",
+                  "variableId": "v_trust",
+                  "op": "lte",
+                  "value": 2.5
+                }
+              ]
+            },
+            "target": "s_left"
+          },
+          {
+            "id": "cs3",
+            "condition": {
+              "join": "or",
+              "clauses": [
+                {
+                  "id": "m4",
+                  "variableId": "v_nick",
+                  "op": "eq",
+                  "value": "Stranger"
+                },
+                {
+                  "id": "m5",
+                  "variableId": "v_courage",
+                  "op": "eq",
+                  "value": 7
+                }
+              ]
+            },
+            "target": "s_end"
+          }
+        ],
+        "elseTarget": "s_gate2"
+      },
+      "labelLock": null,
+      "role": "normal"
+    },
+    "s_gate2": {
+      "id": "s_gate2",
+      "name": "Gate",
+      "notes": "Private note",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "chapterId": "ch_two",
+      "blocks": [
+        {
+          "id": "h1",
+          "type": "say",
+          "characterId": null,
+          "text": "Beyond the gate.",
+          "voiceAssetId": null
+        }
+      ],
+      "ending": {
+        "type": "branch",
+        "cases": [
+          {
+            "id": "cs4",
+            "condition": {
+              "join": "and",
+              "clauses": [
+                {
+                  "id": "m6",
+                  "variableId": "v_courage",
+                  "op": "gt",
+                  "value": 5
+                }
+              ]
+            },
+            "target": "s_end"
+          },
+          {
+            "id": "cs5",
+            "condition": {
+              "join": "or",
+              "clauses": [
+                {
+                  "id": "m7",
+                  "variableId": "v_trust",
+                  "op": "gte",
+                  "value": 3
+                },
+                {
+                  "id": "m8",
+                  "variableId": "v_nick",
+                  "op": "neq",
+                  "value": "Bob"
+                }
+              ]
+            },
+            "target": "s_door"
+          }
+        ],
+        "elseTarget": null
+      },
+      "labelLock": null,
+      "role": "normal"
+    },
+    "s_door": {
+      "id": "s_door",
+      "name": "Locked door",
+      "notes": "Private note",
+      "position": {
+        "x": 0,
+        "y": 100
+      },
+      "chapterId": "ch_two",
+      "blocks": [
+        {
+          "id": "d1",
+          "type": "say",
+          "characterId": "c_anna",
+          "text": "It's locked.",
+          "voiceAssetId": null
+        }
+      ],
+      "ending": {
+        "type": "choice",
+        "prompt": null,
+        "options": [
+          {
+            "id": "o4",
+            "text": "Knock",
+            "condition": {
+              "join": "and",
+              "clauses": [
+                {
+                  "id": "k4",
+                  "variableId": "v_key",
+                  "op": "eq",
+                  "value": true
+                }
+              ]
+            },
+            "effects": [],
+            "target": "s_end"
+          },
+          {
+            "id": "o5",
+            "text": "Leave",
+            "condition": {
+              "join": "and",
+              "clauses": [
+                {
+                  "id": "k5",
+                  "variableId": "v_courage",
+                  "op": "gt",
+                  "value": 0
+                }
+              ]
+            },
+            "effects": [],
+            "target": "s_gate2"
+          }
+        ]
+      },
+      "labelLock": null,
+      "role": "normal"
+    },
+    "s_end": {
+      "id": "s_end",
+      "name": "The End",
+      "notes": "Private note",
+      "position": {
+        "x": 0,
+        "y": 200
+      },
+      "chapterId": "ch_two",
+      "blocks": [
+        {
+          "id": "e1",
+          "type": "say",
+          "characterId": null,
+          "text": "The end.",
+          "voiceAssetId": null
+        }
+      ],
+      "ending": {
+        "type": "end"
+      },
+      "labelLock": null,
+      "role": "normal"
+    },
+    "s_secret": {
+      "id": "s_secret",
+      "name": "Secret",
+      "notes": "Private note",
+      "position": {
+        "x": 0,
+        "y": 300
+      },
+      "chapterId": null,
+      "blocks": [],
+      "ending": {
+        "type": "jump",
+        "target": "s_end"
+      },
+      "labelLock": null,
+      "role": "normal"
+    }
+  },
+  "chapters": {
+    "ch_one": {
+      "id": "ch_one",
+      "name": "Act One",
+      "color": "#7c9cff"
+    },
+    "ch_two": {
+      "id": "ch_two",
+      "name": "Act Two",
+      "color": "#e86a92"
+    }
+  },
+  "chapterOrder": [
+    "ch_one",
+    "ch_two"
+  ],
+  "characters": {
+    "c_anna": {
+      "id": "c_anna",
+      "name": "Anna",
+      "color": "#e86a92",
+      "mode": "adv",
+      "sideAssetId": null,
+      "expressions": [
+        {
+          "id": "e_happy",
+          "name": "Happy",
+          "assetId": "a_anna_happy"
+        },
+        {
+          "id": "e_sad",
+          "name": "Sad",
+          "assetId": "a_anna_sad"
+        }
+      ]
+    },
+    "c_left": {
+      "id": "c_left",
+      "name": "Left",
+      "color": "#4a90d9",
+      "mode": "adv",
+      "sideAssetId": null,
+      "expressions": [
+        {
+          "id": "e_smile",
+          "name": "Smile",
+          "assetId": "a_left_smile"
+        }
+      ]
+    },
+    "c_dr": {
+      "id": "c_dr",
+      "name": "Dr. \"D\"",
+      "color": "#c0a060",
+      "mode": "adv",
+      "sideAssetId": null,
+      "expressions": [
+        {
+          "id": "e_neutral",
+          "name": "Neutral",
+          "assetId": "a_dr_neutral"
+        }
+      ]
+    }
+  },
+  "characterOrder": [
+    "c_anna",
+    "c_left",
+    "c_dr"
+  ],
+  "variables": {
+    "v_courage": {
+      "id": "v_courage",
+      "name": "Courage",
+      "type": "number",
+      "defaultValue": 0,
+      "description": "",
+      "persistent": false
+    },
+    "v_key": {
+      "id": "v_key",
+      "name": "Has Key",
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "",
+      "persistent": false
+    },
+    "v_nick": {
+      "id": "v_nick",
+      "name": "Nickname",
+      "type": "text",
+      "defaultValue": "Stranger",
+      "description": "",
+      "persistent": false
+    },
+    "v_trust": {
+      "id": "v_trust",
+      "name": "Trust",
+      "type": "number",
+      "defaultValue": 2.5,
+      "description": "",
+      "persistent": false
+    }
+  },
+  "variableOrder": [
+    "v_courage",
+    "v_key",
+    "v_nick",
+    "v_trust"
+  ],
+  "assets": {
+    "a_forest": {
+      "id": "a_forest",
+      "kind": "background",
+      "name": "Forest",
+      "file": "backgrounds/a_forest.png",
+      "width": 1,
+      "height": 1,
+      "bytes": 70
+    },
+    "a_gate": {
+      "id": "a_gate",
+      "kind": "background",
+      "name": "Gate",
+      "file": "backgrounds/a_gate.png",
+      "width": 1,
+      "height": 1,
+      "bytes": 70
+    },
+    "a_spare": {
+      "id": "a_spare",
+      "kind": "background",
+      "name": "Spare",
+      "file": "backgrounds/a_spare.png",
+      "width": 1,
+      "height": 1,
+      "bytes": 70
+    },
+    "a_anna_happy": {
+      "id": "a_anna_happy",
+      "kind": "sprite",
+      "name": "Anna Happy",
+      "file": "sprites/a_anna_happy.png",
+      "width": 1,
+      "height": 1,
+      "bytes": 70
+    },
+    "a_anna_sad": {
+      "id": "a_anna_sad",
+      "kind": "sprite",
+      "name": "Anna Sad",
+      "file": "sprites/a_anna_sad.png",
+      "width": 1,
+      "height": 1,
+      "bytes": 70
+    },
+    "a_left_smile": {
+      "id": "a_left_smile",
+      "kind": "sprite",
+      "name": "Left Smile",
+      "file": "sprites/a_left_smile.png",
+      "width": 1,
+      "height": 1,
+      "bytes": 70
+    },
+    "a_dr_neutral": {
+      "id": "a_dr_neutral",
+      "kind": "sprite",
+      "name": "Dr Neutral",
+      "file": "sprites/a_dr_neutral.png",
+      "width": 1,
+      "height": 1,
+      "bytes": 70
+    },
+    "a_morning": {
+      "id": "a_morning",
+      "kind": "music",
+      "name": "Morning",
+      "file": "music/a_morning.wav",
+      "width": null,
+      "height": null,
+      "bytes": 70
+    },
+    "a_night": {
+      "id": "a_night",
+      "kind": "music",
+      "name": "Night Theme",
+      "file": "music/a_night.wav",
+      "width": null,
+      "height": null,
+      "bytes": 70
+    },
+    "a_door": {
+      "id": "a_door",
+      "kind": "sound",
+      "name": "Door",
+      "file": "sounds/a_door.wav",
+      "width": null,
+      "height": null,
+      "bytes": 70
+    }
+  },
+  "screens": {},
+  "screenOrder": [],
+  "scriptFiles": [],
+  "kits": [],
+  "look": {}
+}
