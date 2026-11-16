@@ -1,3 +1,4 @@
+import { visitTargets, walkBlocks } from './blockTree'
 import type { Id, Project, Scene } from './model'
 
 export interface ExitInfo {
@@ -131,4 +132,41 @@ export function setExitTarget(scene: Scene, handleId: string, target: Id | null)
     }
   }
   return false
+}
+
+/** An arrow drawn for a Visit block. Derived like every edge, but it is not an exit: it can't be dragged, reconnected or deleted. */
+export interface VisitEdge {
+  id: string
+  kind: 'visit'
+  source: Id
+  /** The Visit block that makes the arrow. */
+  blockId: Id
+  /** Source handle id on the card. */
+  handle: 'visit'
+  target: Id
+}
+
+/** One edge per Visit block (at any depth) whose target scene exists. Never stored. */
+export function deriveVisitEdges(project: Project): VisitEdge[] {
+  const edges: VisitEdge[] = []
+  for (const scene of Object.values(project.scenes)) {
+    walkBlocks(scene.blocks, (b) => {
+      if (b.type === 'visit' && b.sceneId !== null && project.scenes[b.sceneId]) {
+        edges.push({ id: `${scene.id}:visit:${b.id}`, kind: 'visit', source: scene.id, blockId: b.id, handle: 'visit', target: b.sceneId })
+      }
+    })
+  }
+  return edges
+}
+
+/** Scenes a scene leads to: its exit targets, then the scenes it visits. Used by reachability and layout. */
+export function sceneSuccessors(project: Project, sceneId: Id): Id[] {
+  const scene = project.scenes[sceneId]
+  if (!scene) return []
+  const out: Id[] = []
+  for (const x of listExits(scene, project)) {
+    if (x.target !== null && project.scenes[x.target] && !out.includes(x.target)) out.push(x.target)
+  }
+  for (const t of visitTargets(scene.blocks)) if (project.scenes[t] && !out.includes(t)) out.push(t)
+  return out
 }

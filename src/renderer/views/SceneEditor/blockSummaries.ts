@@ -1,4 +1,5 @@
 import type { Block, Effect, Id, Project, Scalar } from '@shared/model'
+import { conditionToWords } from '@shared/conditions'
 import { transitionLabel } from './editorHelpers'
 
 export interface BlockSummary {
@@ -110,6 +111,21 @@ export function summarizeBlock(block: Block, project: Project): BlockSummary {
       return { title: 'Text box', detail: block.action === 'show' ? 'Show' : 'Hide' }
     case 'clearPage':
       return { title: 'Clear page', detail: 'Start a fresh NVL page' }
+    case 'visit': {
+      const scene = block.sceneId === null ? undefined : project.scenes[block.sceneId]
+      return { title: 'Visit scene', detail: scene ? `${scene.name || 'Untitled scene'} · then comes back here` : block.sceneId === null ? 'Pick a scene' : 'Missing scene' }
+    }
+    case 'if': {
+      const words = conditionToWords(block.condition, (id) => project.variables[id]?.name || 'a variable')
+      const usable = block.condition.clauses.some((c) => c.variableId !== null)
+      return { title: 'If', detail: usable ? oneLine(words, 50) : 'Pick a condition' }
+    }
+    case 'inlineChoice': {
+      const n = block.options.length
+      const options = n === 1 ? '1 option' : `${n} options`
+      const prompt = block.prompt && block.prompt.text.trim() !== '' ? `"${oneLine(block.prompt.text, 36)}" · ` : ''
+      return { title: 'Choice', detail: `${prompt}${options} · stays in this scene` }
+    }
     default:
       return { title: 'Block', detail: (block as { type: string }).type }
   }

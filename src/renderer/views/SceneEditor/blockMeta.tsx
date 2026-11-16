@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react'
 import {
   Bell,
+  CornerDownRight,
+  GitBranch,
+  ListTree,
   Eraser,
   Film,
   Hash,
@@ -54,6 +57,12 @@ export function iconFor(type: string, narration: boolean, size = 16): ReactNode 
       return <PanelBottom size={size} />
     case 'clearPage':
       return <Eraser size={size} />
+    case 'visit':
+      return <CornerDownRight size={size} />
+    case 'if':
+      return <GitBranch size={size} />
+    case 'inlineChoice':
+      return <ListTree size={size} />
     default:
       return <Sparkles size={size} />
   }
@@ -90,6 +99,12 @@ export function blockKindLabel(block: Block): string {
       return 'Text box show/hide'
     case 'clearPage':
       return 'Clear page'
+    case 'visit':
+      return 'Visit scene'
+    case 'if':
+      return 'If'
+    case 'inlineChoice':
+      return 'Choice (stay in scene)'
     default:
       return 'Block'
   }

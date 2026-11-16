@@ -4,23 +4,28 @@ import {
   DragOverlay,
   PointerSensor,
   closestCenter,
+  pointerWithin,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragMoveEvent,
   type DragStartEvent
 } from '@dnd-kit/core'
 import { ArrowLeft, Map as MapIcon } from 'lucide-react'
-import type { Scene } from '@shared/model'
+import { blockHeight, findBlockPath, getBlockAt } from '@shared/blockTree'
+import { createBlock } from '@shared/factory'
+import type { Id, Scene } from '@shared/model'
 import { Button } from '../../components/Button'
 import { EmptyState } from '../../components/EmptyState'
 import { useProjectStore } from '../../store/projectStore'
 import { useUiStore } from '../../store/uiStore'
 import './sceneEditor.css'
-import { addEntryAt } from './blockActions'
-import { BlockList, LIST_END_ID } from './BlockList'
-import type { PaletteEntry } from './blockMeta'
-import { dropInsertIndex } from './editorHelpers'
+import { addEntryAtPath, reportRefusal } from './blockActions'
+import { blockIcon, type PaletteEntry } from './blockMeta'
+import { summarizeBlock } from './blockSummaries'
+import { BlockList } from './BlockList'
+import { dragHeight, resolveDrop, type DropTarget } from './editorHelpers'
 import { EditorStage } from './EditorStage'
 import { EndingPanel } from './EndingPanel/EndingPanel'
 import { Inspector } from './Inspector/Inspector'
@@ -28,61 +33,110 @@ import { Palette, PaletteGhost } from './Palette'
 import { SceneBar } from './SceneBar'
 import { useEditorKeys } from './useEditorKeys'
 
+type Dragging = { kind: 'palette'; entry: PaletteEntry } | { kind: 'block'; id: Id }
+
+/**
+ * Collision: the droppable under the pointer wins. Between two rows (or over a label) the nearest droppable by
+ * distance to its rectangle is used, so a drag never ends up with nothing to land on while the pointer is inside the list.
+ */
+const collide: CollisionDetection = (args) => {
+  const within = pointerWithin(args)
+  if (within.length > 0) return within
+  const point = args.pointerCoordinates
+  if (!point) return closestCenter(args)
+  const scored: { id: string | number; value: number; data: { droppableContainer: (typeof args.droppableContainers)[number]; value: number } }[] = []
+  for (const container of args.droppableContainers) {
+    const rect = args.droppableRects.get(container.id)
+    if (!rect) continue
+    const dx = Math.max(rect.left - point.x, 0, point.x - (rect.left + rect.width))
+    const dy = Math.max(rect.top - point.y, 0, point.y - (rect.top + rect.height))
+    const value = Math.hypot(dx, dy)
+    scored.push({ id: container.id, value, data: { droppableContainer: container, value } })
+  }
+  return scored.sort((x, y) => x.value - y.value).slice(0, 1)
+}
+
+function BlockGhost({ sceneId, id }: { sceneId: Id; id: Id }) {
+  const project = useProjectStore((s) => s.project)
+  const scene = project?.scenes[sceneId]
+  const path = scene ? findBlockPath(scene.blocks, id) : null
+  const block = scene && path ? getBlockAt(scene.blocks, path) : undefined
+  if (!project || !block) return null
+  const summary = summarizeBlock(block, project)
+  return (
+    <div className="block-row block-ghost">
+      <span className="row-icon">{blockIcon(block)}</span>
+      <span className="row-title">{summary.title}</span>
+      <span className="row-detail">{summary.detail}</span>
+    </div>
+  )
+}
+
 function Editor({ scene }: { scene: Scene }) {
   const project = useProjectStore((s) => s.project)!
   const moveBlock = useProjectStore((s) => s.moveBlock)
-  const [activeEntry, setActiveEntry] = useState<PaletteEntry | null>(null)
-  const [dropAt, setDropAt] = useState<number | null>(null)
+  const [dragging, setDragging] = useState<Dragging | null>(null)
+  const [drop, setDrop] = useState<DropTarget | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
   useEditorKeys(scene.id)
 
   const onDragStart = (e: DragStartEvent): void => {
     const entry = (e.active.data.current as { entry?: PaletteEntry } | undefined)?.entry
-    if (entry) setActiveEntry(entry)
-    else useUiStore.getState().selectBlock(String(e.active.id))
+    if (entry) setDragging({ kind: 'palette', entry })
+    else {
+      setDragging({ kind: 'block', id: String(e.active.id) })
+      useUiStore.getState().selectBlock(String(e.active.id))
+    }
   }
 
-  /** While a palette entry is dragged: which gap of the list is it over? */
+  /** While dragging: which gap of which list is the pointer over? */
   const onDragMove = (e: DragMoveEvent): void => {
-    if (!activeEntry) return
+    if (!dragging) return
     const over = e.over
-    if (!over) return setDropAt(null)
-    if (over.id === LIST_END_ID) return setDropAt(scene.blocks.length)
-    const index = scene.blocks.findIndex((b) => b.id === over.id)
-    if (index < 0) return setDropAt(null)
+    if (!over) return setDrop(null)
+    const start = e.activatorEvent as PointerEvent | undefined
+    const pointerY = start && typeof start.clientY === 'number' ? start.clientY + e.delta.y : null
     const dragged = e.active.rect.current.translated
-    const centre = dragged ? dragged.top + dragged.height / 2 : over.rect.top
-    setDropAt(dropInsertIndex(index, centre > over.rect.top + over.rect.height / 2))
+    const y = pointerY ?? (dragged ? dragged.top + dragged.height / 2 : over.rect.top)
+    const lowerHalf = y > over.rect.top + over.rect.height / 2
+    const height = dragging.kind === 'palette' ? blockHeight(createBlock(dragging.entry.type)) : dragHeight(scene.blocks, dragging.id)
+    const next = resolveDrop(scene.blocks, String(over.id), lowerHalf, height, dragging.kind === 'block' ? dragging.id : null)
+    setDrop((prev) =>
+      prev && next && prev.listKey === next.listKey && prev.index === next.index && prev.fits === next.fits ? prev : next
+    )
   }
 
   const finish = (): void => {
-    setActiveEntry(null)
-    setDropAt(null)
+    setDragging(null)
+    setDrop(null)
   }
 
-  const onDragEnd = (e: DragEndEvent): void => {
-    if (activeEntry) {
-      if (dropAt !== null) addEntryAt(scene.id, activeEntry, dropAt)
-      return finish()
-    }
+  const onDragEnd = (_e: DragEndEvent): void => {
+    const target = drop
+    const what = dragging
     finish()
-    if (!e.over || e.active.id === e.over.id) return
-    const from = scene.blocks.findIndex((b) => b.id === e.active.id)
-    const to = e.over.id === LIST_END_ID ? scene.blocks.length - 1 : scene.blocks.findIndex((b) => b.id === e.over!.id)
-    if (from >= 0 && to >= 0) moveBlock(scene.id, from, to)
+    if (!target || !what) return
+    if (what.kind === 'palette') {
+      addEntryAtPath(scene.id, what.entry, target.path)
+      return
+    }
+    const from = findBlockPath(scene.blocks, what.id)
+    if (from) reportRefusal(moveBlock(scene.id, from, target.path))
   }
 
   return (
     <div className="scene-editor">
       <SceneBar scene={scene} />
       <div className="scene-body">
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={finish}>
+        <DndContext sensors={sensors} collisionDetection={collide} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={finish}>
           <Palette sceneId={scene.id} />
           <main className="scene-centre">
-            <BlockList scene={scene} project={project} dropAt={dropAt} />
+            <BlockList scene={scene} project={project} drop={drop} />
             <EndingPanel scene={scene} />
           </main>
-          <DragOverlay dropAnimation={null}>{activeEntry ? <PaletteGhost entry={activeEntry} /> : null}</DragOverlay>
+          <DragOverlay dropAnimation={null}>
+            {dragging?.kind === 'palette' ? <PaletteGhost entry={dragging.entry} /> : dragging?.kind === 'block' ? <BlockGhost sceneId={scene.id} id={dragging.id} /> : null}
+          </DragOverlay>
         </DndContext>
         <aside className="scene-side">
           <EditorStage scene={scene} />

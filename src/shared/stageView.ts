@@ -1,6 +1,8 @@
 import type { Asset, Character, Id, Project, StagePosition } from './model'
 import type { CustomPlacement, StageSprite } from './stage'
 import { buildNameTable } from './naming'
+import type { BlockPath } from './blockTree'
+import { appliedBlocks } from './stage'
 
 export interface ResolvedSprite {
   key: string
@@ -60,9 +62,14 @@ export function variableResolver(
   }
 }
 
-/** Whether a background block at or before `blockIndex` has set the background in this scene. */
-export function sceneSetsBackground(project: Project, sceneId: Id, blockIndex: number): boolean {
+/** Whether a background block that has run by the time the block at `path` has run set the background in this scene (see `appliedBlocks` for what counts as run). */
+export function sceneSetsBackgroundAt(project: Project, sceneId: Id, path: BlockPath): boolean {
   const scene = project.scenes[sceneId]
   if (!scene) return false
-  return scene.blocks.slice(0, blockIndex + 1).some((b) => b.type === 'background')
+  return appliedBlocks(scene.blocks, path).some((b) => b.type === 'background')
+}
+
+/** Whether a background block at or before the top-level block `blockIndex` has set the background in this scene. */
+export function sceneSetsBackground(project: Project, sceneId: Id, blockIndex: number): boolean {
+  return sceneSetsBackgroundAt(project, sceneId, [{ i: blockIndex }])
 }

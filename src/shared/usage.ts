@@ -1,4 +1,5 @@
-import type { Block, Condition, Effect, Id, Project, Scene, ScreenElement } from './model'
+import { walkBlocks } from './blockTree'
+import type { Condition, Effect, Id, Project, Scene, ScreenElement } from './model'
 
 /** One place where an asset, character or variable is used. */
 export interface UsageRef {
@@ -44,23 +45,6 @@ const short = (text: string, max = 28): string => {
   return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat
 }
 
-/** Visit a block and every block nested inside it. Reads nested lists defensively so future block types are covered. */
-function walk(blocks: unknown, fn: (b: Block) => void): void {
-  if (!Array.isArray(blocks)) return
-  for (const raw of blocks) {
-    if (!raw || typeof raw !== 'object') continue
-    const b = raw as Block
-    fn(b)
-    const any = raw as unknown as Record<string, unknown>
-    walk(any.then, fn)
-    walk(any.otherwise, fn)
-    walk(any.blocks, fn)
-    if (Array.isArray(any.options)) {
-      for (const o of any.options) if (o && typeof o === 'object') walk((o as Record<string, unknown>).blocks, fn)
-    }
-  }
-}
-
 export function findUsage(project: Project): UsageIndex {
   const index: UsageIndex = { assets: {}, characters: {}, variables: {} }
   const add = (map: Record<Id, UsageRef[]>, id: Id | null | undefined, ref: UsageRef): void => {
@@ -88,7 +72,7 @@ export function findUsage(project: Project): UsageIndex {
       ...extra
     })
 
-    walk(scene.blocks, (b) => {
+    walkBlocks(scene.blocks, (b) => {
       const at = (description: string): UsageRef => base(description, { blockId: b.id })
       switch (b.type) {
         case 'say': {

@@ -3,18 +3,18 @@ import type { CoreBlock, Transition } from '@shared/model'
 import { CharacterSelect } from '../../../components/EntitySelects'
 import { Select } from '../../../components/Select'
 import { useProjectStore } from '../../../store/projectStore'
-import { TRANSITION_OPTIONS, charactersForHide } from '../editorHelpers'
+import { TRANSITION_OPTIONS, charactersForHideAt } from '../editorHelpers'
 import { useBlockPatch, type InspectorProps } from './types'
 
 type Hide = Extract<CoreBlock, { type: 'hide' }>
 
-export function HideInspector({ sceneId, block, index }: InspectorProps<Hide>) {
+export function HideInspector({ sceneId, block, path }: InspectorProps<Hide>) {
   const patch = useBlockPatch<Hide>(sceneId, block.id)
   const project = useProjectStore((s) => s.project)
   const firstGroup = useMemo(() => {
     if (!project) return undefined
-    return { label: 'On stage now', ids: charactersForHide(project, sceneId, index).onStage, restLabel: 'Other characters' }
-  }, [project, sceneId, index])
+    return { label: 'On stage now', ids: charactersForHideAt(project, sceneId, path).onStage, restLabel: 'Other characters' }
+  }, [project, sceneId, path])
   return (
     <>
       <div className="field">

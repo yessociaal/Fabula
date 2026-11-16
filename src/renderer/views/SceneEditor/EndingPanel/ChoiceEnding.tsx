@@ -1,11 +1,10 @@
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { GripVertical, Plus, Trash2, X } from 'lucide-react'
+import { GripVertical, Plus, Trash2 } from 'lucide-react'
 import type { ChoiceOption, CoreEnding, Id } from '@shared/model'
-import { conditionToWords } from '@shared/conditions'
 import { Button } from '../../../components/Button'
 import { CommitField } from '../../../components/CommitField'
-import { ConditionBuilder } from '../../../components/ConditionBuilder'
+import { ConditionChip } from '../../../components/ConditionChip'
 import { EffectsEditor } from '../../../components/EffectsEditor'
 import { CharacterSelect, SceneSelect } from '../../../components/EntitySelects'
 import { IconButton } from '../../../components/IconButton'
@@ -23,12 +22,9 @@ interface Props {
 
 function OptionRow({ sceneId, option, index, problem }: { sceneId: Id; option: ChoiceOption; index: number; problem: RowProblem | undefined }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: option.id })
-  const variables = useProjectStore((s) => s.project?.variables)
   const updateOption = useProjectStore((s) => s.updateOption)
   const deleteOption = useProjectStore((s) => s.deleteOption)
   const setExitTarget = useProjectStore((s) => s.setExitTarget)
-  const nameOf = (id: Id): string => variables?.[id]?.name ?? 'a missing variable'
-  const words = option.condition ? conditionToWords(option.condition, nameOf) : null
 
   return (
     <div
@@ -49,41 +45,12 @@ function OptionRow({ sceneId, option, index, problem }: { sceneId: Id; option: C
         value={option.text}
         onCommit={(text) => updateOption(sceneId, option.id, { text })}
       />
-      <Popover
-        label="Show this choice only when…"
-        className="popover-wide"
-        trigger={(props) => (
-          <button
-            type="button"
-            {...props}
-            className={`chip-btn ${option.condition ? 'active' : ''}`}
-            title={words ? `Shown only when ${words}` : 'Show this choice only when a condition is true'}
-          >
-            {words ? `if ${words}` : 'if'}
-          </button>
-        )}
-      >
-        {(close) => (
-          <div className="popover-body">
-            <div className="popover-title">Show this choice only when…</div>
-            <ConditionBuilder value={option.condition} onChange={(condition) => updateOption(sceneId, option.id, { condition })} />
-            {option.condition && (
-              <div className="popover-footer">
-                <span className="muted-note">{words}</span>
-                <Button
-                  icon={<X size={14} />}
-                  onClick={() => {
-                    updateOption(sceneId, option.id, { condition: null })
-                    close()
-                  }}
-                >
-                  Clear condition
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
-      </Popover>
+      <ConditionChip
+        value={option.condition}
+        onChange={(condition) => updateOption(sceneId, option.id, { condition })}
+        title="Show this choice only when…"
+        emptyTitle="Show this choice only when a condition is true"
+      />
       <Popover
         label="Variable changes"
         className="popover-wide"

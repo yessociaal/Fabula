@@ -1,3 +1,4 @@
+import { getBlockAt, resolveList, type BlockPath } from './blockTree'
 import type { Effect, Id, Project, Scalar } from './model'
 import { evaluateCondition, type VariableValues } from './conditions'
 import { applyBlockToStage, type StageState } from './stage'
@@ -21,9 +22,23 @@ export interface PlayAsk {
   maxLength: number
 }
 
+/** Where a Visit block returns to: the scene it was in and the position right after the Visit block. */
+export interface ReturnPoint {
+  sceneId: Id
+  cursor: BlockPath
+}
+
 export interface PlayState {
   sceneId: Id | null
-  blockIndex: number
+  /**
+   * The next block to run, as a block path (see blockTree.ts): the last step's `i` is the index of the next block in its list,
+   * the steps before it say which containers the story is inside (each with the branch it is in).
+   */
+  cursor: BlockPath
+  /** Visit blocks that have not finished yet, innermost last. An End ending pops the last one and carries on after its Visit block. */
+  callStack: ReturnPoint[]
+  /** While an inline Choice block is showing its options: the path of that block. */
+  inlineMenu: BlockPath | null
   stage: StageState
   /** Whether the current music track loops. */
   musicLoop: boolean
@@ -58,6 +73,8 @@ export type PlayInput = { type: 'advance' } | { type: 'choose'; optionId: Id } |
 export const NOWHERE_NOTICE = 'This exit goes nowhere'
 /** A story that loops forever without ever waiting for the player is stopped after this many actions in one step. */
 const MAX_ACTIONS = 5000
+/** Scenes that visit each other without end are stopped at this many open visits. */
+const MAX_CALL_DEPTH = 64
 
 /** Apply one variable change. Changes that do not fit the variable's type are ignored. */
 export function applyEffect(values: VariableValues, effect: Effect): VariableValues {
@@ -93,7 +110,14 @@ export function defaultVariables(project: Project): VariableValues {
 }
 
 function cloneState(s: PlayState): PlayState {
-  return { ...s, stage: { ...s.stage, sprites: s.stage.sprites.map((x) => ({ ...x })) }, history: [...s.history] }
+  return {
+    ...s,
+    stage: { ...s.stage, sprites: s.stage.sprites.map((x) => ({ ...x })) },
+    history: [...s.history],
+    cursor: [...s.cursor],
+    callStack: [...s.callStack],
+    inlineMenu: s.inlineMenu ? [...s.inlineMenu] : null
+  }
 }
 
 function finish(s: PlayState, notice: string | null): void {
@@ -110,7 +134,7 @@ function goTo(project: Project, s: PlayState, target: Id | null): void {
   const scene = target ? project.scenes[target] : undefined
   if (!scene) return finish(s, NOWHERE_NOTICE)
   s.sceneId = scene.id
-  s.blockIndex = 0
+  s.cursor = [{ i: 0 }]
   s.history.push(scene.name)
 }
 
@@ -121,10 +145,38 @@ function run(project: Project, s: PlayState): void {
     const scene = s.sceneId ? project.scenes[s.sceneId] : undefined
     if (!scene) return finish(s, NOWHERE_NOTICE)
 
-    if (s.blockIndex < scene.blocks.length) {
-      const block = scene.blocks[s.blockIndex]
-      s.blockIndex++
+    const prefix = s.cursor.slice(0, -1)
+    const list = resolveList(scene.blocks, prefix)
+    if (!list || s.cursor.length === 0) return finish(s, 'Quick play lost its place in this scene')
+    const at = s.cursor[s.cursor.length - 1].i
+
+    if (at < list.length) {
+      const block = list[at]
+      s.cursor = [...prefix, { i: at + 1 }]
       switch (block.type) {
+        case 'visit': {
+          const target = block.sceneId ? project.scenes[block.sceneId] : undefined
+          if (!target) break
+          if (s.callStack.length >= MAX_CALL_DEPTH) return finish(s, 'Stopped: scenes visit each other without ever finishing')
+          s.callStack.push({ sceneId: scene.id, cursor: s.cursor })
+          s.sceneId = target.id
+          s.cursor = [{ i: 0 }]
+          s.history.push(target.name)
+          break
+        }
+        case 'if': {
+          const key = evaluateCondition(block.condition, s.variables) ? 'then' : 'otherwise'
+          if (block[key].length > 0) s.cursor = [...prefix, { i: at, in: key }, { i: 0 }]
+          break
+        }
+        case 'inlineChoice': {
+          const options = block.options.filter((o) => o.condition === null || evaluateCondition(o.condition, s.variables))
+          if (options.length === 0) break
+          s.line = block.prompt ? { characterId: block.prompt.characterId, text: block.prompt.text } : null
+          s.menu = options.map((o) => ({ id: o.id, text: o.text }))
+          s.inlineMenu = [...prefix, { i: at }]
+          return
+        }
         case 'say':
           s.line = { characterId: block.characterId, text: block.text }
           if (block.voiceAssetId) {
@@ -174,13 +226,28 @@ function run(project: Project, s: PlayState): void {
       continue
     }
 
+    if (s.cursor.length > 1) {
+      // The end of a branch: carry on after the container.
+      const up = s.cursor.slice(0, -1)
+      s.cursor = [...up.slice(0, -1), { i: up[up.length - 1].i + 1 }]
+      continue
+    }
+
     const ending = scene.ending
     switch (ending.type) {
       case 'jump':
         goTo(project, s, ending.target)
         break
-      case 'end':
-        return finish(s, null)
+      case 'end': {
+        const back = s.callStack.pop()
+        if (!back) return finish(s, null)
+        const caller = project.scenes[back.sceneId]
+        if (!caller) return finish(s, NOWHERE_NOTICE)
+        s.sceneId = caller.id
+        s.cursor = back.cursor
+        s.history.push(caller.name)
+        break
+      }
       case 'branch': {
         const hit = ending.cases.find((c) => evaluateCondition(c.condition, s.variables))
         goTo(project, s, hit ? hit.target : ending.elseTarget)
@@ -204,7 +271,9 @@ export function start(project: Project, sceneId: Id | null): PlayState {
   const scene = sceneId ? project.scenes[sceneId] : undefined
   const s: PlayState = {
     sceneId: scene ? scene.id : null,
-    blockIndex: 0,
+    cursor: [{ i: 0 }],
+    callStack: [],
+    inlineMenu: null,
     stage: { background: null, sprites: [], music: null },
     musicLoop: true,
     soundSeq: 0,
@@ -256,6 +325,18 @@ export function step(project: Project, state: PlayState, input: PlayInput): Play
   }
   if (!s.menu || !s.menu.some((o) => o.id === input.optionId)) return state
   const scene = s.sceneId ? project.scenes[s.sceneId] : undefined
+  if (s.inlineMenu) {
+    const block = scene ? getBlockAt(scene.blocks, s.inlineMenu) : undefined
+    const picked = block && block.type === 'inlineChoice' ? block.options.find((o) => o.id === input.optionId) : undefined
+    if (!block || !picked) return state
+    const menuAt = s.inlineMenu
+    s.line = null
+    s.menu = null
+    s.inlineMenu = null
+    s.cursor = [...menuAt.slice(0, -1), { i: menuAt[menuAt.length - 1].i, in: `opt:${picked.id}` }, { i: 0 }]
+    run(project, s)
+    return s
+  }
   const ending = scene?.ending
   const option = ending && ending.type === 'choice' ? ending.options.find((o) => o.id === input.optionId) : undefined
   if (!option) return state

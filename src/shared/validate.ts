@@ -1,5 +1,6 @@
 import type { Block, Condition, Effect, Id, Project, Scene, StagePosition } from './model'
-import { deriveEdges } from './edges'
+import { MAX_BLOCK_DEPTH, walkBlocks, type BlockPath } from './blockTree'
+import { sceneSuccessors } from './edges'
 import { labelLockProblem } from './naming'
 
 export interface Problem {
@@ -121,8 +122,11 @@ export function validateProject(project: Project): Problem[] {
     }
   }
 
-  const checkBlock = (scene: Scene, block: Block, index: number): void => {
-    const where = `block ${index + 1}`
+  /** `block 3`, or `block 2.1.3` for a block inside another block. */
+  const labelOf = (path: BlockPath): string => `block ${path.map((s) => s.i + 1).join('.')}`
+
+  const checkBlock = (scene: Scene, block: Block, label: string): void => {
+    const where = label
     switch (block.type) {
       case 'say':
         if (block.characterId !== null) usedCharacters.add(block.characterId)
@@ -132,7 +136,7 @@ export function validateProject(project: Project): Problem[] {
         if (block.text.trim() === '') {
           add({
             severity: 'warning',
-            message: `${sceneOf(scene)}: a dialogue line (block ${index + 1}) is empty.`,
+            message: `${sceneOf(scene)}: a dialogue line (${label}) is empty.`,
             sceneId: scene.id,
             blockId: block.id
           })
@@ -146,7 +150,7 @@ export function validateProject(project: Project): Problem[] {
         if (!character || block.expressionId === null) {
           add({
             severity: 'error',
-            message: `${sceneOf(scene)}: the Show block (block ${index + 1}) needs a character and an expression. Pick both.`,
+            message: `${sceneOf(scene)}: the Show block (${label}) needs a character and an expression. Pick both.`,
             sceneId: scene.id,
             blockId: block.id
           })
@@ -157,7 +161,7 @@ export function validateProject(project: Project): Problem[] {
         if (!expression) {
           add({
             severity: 'error',
-            message: `${sceneOf(scene)}: the Show block (block ${index + 1}) uses an expression that no longer exists for ${character.name}. Pick another.`,
+            message: `${sceneOf(scene)}: the Show block (${label}) uses an expression that no longer exists for ${character.name}. Pick another.`,
             sceneId: scene.id,
             blockId: block.id
           })
@@ -166,7 +170,7 @@ export function validateProject(project: Project): Problem[] {
         if (expression.assetId === null || !project.assets[expression.assetId]) {
           add({
             severity: 'error',
-            message: `${sceneOf(scene)}: ${character.name}'s expression "${expression.name}" has no image, but the Show block (block ${index + 1}) uses it. Upload an image for it.`,
+            message: `${sceneOf(scene)}: ${character.name}'s expression "${expression.name}" has no image, but the Show block (${label}) uses it. Upload an image for it.`,
             sceneId: scene.id,
             blockId: block.id
           })
@@ -182,7 +186,7 @@ export function validateProject(project: Project): Problem[] {
         if (block.assetId === null || !project.assets[block.assetId]) {
           add({
             severity: 'error',
-            message: `${sceneOf(scene)}: the Play music block (block ${index + 1}) has no track. Pick a music file.`,
+            message: `${sceneOf(scene)}: the Play music block (${label}) has no track. Pick a music file.`,
             sceneId: scene.id,
             blockId: block.id
           })
@@ -192,7 +196,7 @@ export function validateProject(project: Project): Problem[] {
         if (block.assetId === null || !project.assets[block.assetId]) {
           add({
             severity: 'error',
-            message: `${sceneOf(scene)}: the Play sound block (block ${index + 1}) has no sound. Pick a sound file.`,
+            message: `${sceneOf(scene)}: the Play sound block (${label}) has no sound. Pick a sound file.`,
             sceneId: scene.id,
             blockId: block.id
           })
@@ -206,7 +210,7 @@ export function validateProject(project: Project): Problem[] {
         if (!variable) {
           add({
             severity: 'error',
-            message: `${sceneOf(scene)}: the Ask the player block (block ${index + 1}) has no variable to store the answer in. Pick a text variable.`,
+            message: `${sceneOf(scene)}: the Ask the player block (${label}) has no variable to store the answer in. Pick a text variable.`,
             sceneId: scene.id,
             blockId: block.id
           })
@@ -216,7 +220,7 @@ export function validateProject(project: Project): Problem[] {
         if (variable.type !== 'text') {
           add({
             severity: 'error',
-            message: `${sceneOf(scene)}: the Ask the player block (block ${index + 1}) stores the answer in "${variable.name}", which is not a text variable. Pick a text variable.`,
+            message: `${sceneOf(scene)}: the Ask the player block (${label}) stores the answer in "${variable.name}", which is not a text variable. Pick a text variable.`,
             sceneId: scene.id,
             blockId: block.id
           })
@@ -227,43 +231,117 @@ export function validateProject(project: Project): Problem[] {
         if (block.assetId === null || !project.assets[block.assetId]) {
           add({
             severity: 'error',
-            message: `${sceneOf(scene)}: the Movie block (block ${index + 1}) has no movie. Pick a movie file.`,
+            message: `${sceneOf(scene)}: the Movie block (${label}) has no movie. Pick a movie file.`,
             sceneId: scene.id,
             blockId: block.id
           })
         } else usedAssets.add(block.assetId)
         break
+      case 'visit': {
+        const target = block.sceneId === null ? undefined : project.scenes[block.sceneId]
+        if (!target) {
+          add({
+            severity: 'error',
+            message: `${sceneOf(scene)}: the Visit block (${label}) has no scene to visit. Pick a scene.`,
+            sceneId: scene.id,
+            blockId: block.id
+          })
+        }
+        break
+      }
+      case 'if':
+        if (block.condition.clauses.length === 0) {
+          add({
+            severity: 'error',
+            message: `${sceneOf(scene)}: the If block (${label}) has no condition. Add one.`,
+            sceneId: scene.id,
+            blockId: block.id
+          })
+        } else checkCondition(scene, block.condition, `the If block (${label})`, block.id)
+        break
+      case 'inlineChoice': {
+        if (block.prompt && block.prompt.characterId !== null) usedCharacters.add(block.prompt.characterId)
+        if (block.options.length === 0) {
+          add({
+            severity: 'error',
+            message: `${sceneOf(scene)}: the Choice block (${label}) has no options. Add at least one option.`,
+            sceneId: scene.id,
+            blockId: block.id
+          })
+        }
+        for (const option of block.options) {
+          if (option.text.trim() === '') {
+            add({
+              severity: 'error',
+              message: `${sceneOf(scene)}: an option of the Choice block (${label}) has no text. Type what the player sees.`,
+              sceneId: scene.id,
+              blockId: block.id
+            })
+          }
+          if (option.condition) checkCondition(scene, option.condition, `an option of the Choice block (${label})`, block.id)
+        }
+        if (block.options.length > 0 && block.options.every((o) => o.condition !== null)) {
+          add({
+            severity: 'warning',
+            message: `${sceneOf(scene)}: every option of the Choice block (${label}) has a condition, so the player may see no options at all.`,
+            sceneId: scene.id,
+            blockId: block.id
+          })
+        }
+        break
+      }
       default:
         break
     }
   }
 
+  type OnStage = Map<Id, { expressionId: Id | null; position: StagePosition }>
+  /** Walks a list in order. Each branch of a container starts from the stage as it was on entering; after a container nothing is assumed. */
   const stageWarnings = (scene: Scene): void => {
-    const onStage = new Map<Id, { expressionId: Id | null; position: StagePosition }>()
-    scene.blocks.forEach((block, index) => {
-      if (block.type === 'background') onStage.clear()
-      else if (block.type === 'hide' && block.characterId !== null) onStage.delete(block.characterId)
-      else if (block.type === 'show' && block.characterId !== null) {
-        const current = onStage.get(block.characterId)
-        if (current && current.expressionId === block.expressionId && current.position === block.position) {
-          const name = project.characters[block.characterId]?.name ?? 'A character'
-          add({
-            severity: 'warning',
-            message: `${sceneOf(scene)}: ${name} is already on stage in the same position and expression (block ${index + 1}).`,
-            sceneId: scene.id,
-            blockId: block.id
-          })
+    const walkList = (list: Block[], onStage: OnStage, prefix: BlockPath): void => {
+      list.forEach((block, index) => {
+        if (block.type === 'background') onStage.clear()
+        else if (block.type === 'hide' && block.characterId !== null) onStage.delete(block.characterId)
+        else if (block.type === 'show' && block.characterId !== null) {
+          const current = onStage.get(block.characterId)
+          if (current && current.expressionId === block.expressionId && current.position === block.position) {
+            const name = project.characters[block.characterId]?.name ?? 'A character'
+            add({
+              severity: 'warning',
+              message: `${sceneOf(scene)}: ${name} is already on stage in the same position and expression (${labelOf([...prefix, { i: index }])}).`,
+              sceneId: scene.id,
+              blockId: block.id
+            })
+          }
+          onStage.set(block.characterId, { expressionId: block.expressionId, position: block.position })
+        } else if (block.type === 'if') {
+          walkList(block.then, new Map(onStage), [...prefix, { i: index, in: 'then' }])
+          walkList(block.otherwise, new Map(onStage), [...prefix, { i: index, in: 'otherwise' }])
+          onStage.clear()
+        } else if (block.type === 'inlineChoice') {
+          for (const o of block.options) walkList(o.blocks, new Map(onStage), [...prefix, { i: index, in: `opt:${o.id}` }])
+          onStage.clear()
         }
-        onStage.set(block.characterId, { expressionId: block.expressionId, position: block.position })
-      }
-    })
+      })
+    }
+    walkList(scene.blocks, new Map(), [])
   }
 
   const targetMissing = (target: Id | null): boolean => target === null || !project.scenes[target]
   let splashSeen = false
 
   for (const scene of Object.values(project.scenes)) {
-    scene.blocks.forEach((block, i) => checkBlock(scene, block, i))
+    walkBlocks(scene.blocks, (block, info) => {
+      checkBlock(scene, block, labelOf(info.path))
+      if (info.depth === MAX_BLOCK_DEPTH + 1) {
+        add({
+          severity: 'error',
+          message: `${sceneOf(scene)}: a block (${labelOf(info.path)}) is nested more than ${MAX_BLOCK_DEPTH} levels deep. Move it out of its containers.`,
+          sceneId: scene.id,
+          blockId: block.id
+        })
+      }
+    })
     stageWarnings(scene)
     if (scene.blocks.length === 0) {
       add({ severity: 'warning', message: `${sceneOf(scene)}: this scene has no blocks.`, sceneId: scene.id })
@@ -391,16 +469,76 @@ export function validateProject(project: Project): Problem[] {
     }
   }
 
+  const visits = new Map<Id, Id[]>()
+  for (const scene of Object.values(project.scenes)) {
+    const targets: Id[] = []
+    walkBlocks(scene.blocks, (b) => {
+      if (b.type === 'visit' && b.sceneId !== null && project.scenes[b.sceneId]) targets.push(b.sceneId)
+    })
+    visits.set(scene.id, targets)
+  }
+  const visitReaches = (from: Id, goal: Id): boolean => {
+    const seen = new Set<Id>()
+    const stack = [...(visits.get(from) ?? [])]
+    while (stack.length > 0) {
+      const at = stack.pop() as Id
+      if (at === goal) return true
+      if (seen.has(at)) continue
+      seen.add(at)
+      stack.push(...(visits.get(at) ?? []))
+    }
+    return false
+  }
+  for (const scene of Object.values(project.scenes)) {
+    walkBlocks(scene.blocks, (b, info) => {
+      if (b.type !== 'visit' || b.sceneId === null) return
+      const target = project.scenes[b.sceneId]
+      if (!target || !visitReaches(target.id, scene.id)) return
+      const who = target.id === scene.id ? 'itself' : `"${target.name}", which visits "${scene.name}" again`
+      add({
+        severity: 'error',
+        message: `${sceneOf(scene)}: the Visit block (${labelOf(info.path)}) visits ${who}, so it would never finish. Break the loop.`,
+        sceneId: scene.id,
+        blockId: b.id
+      })
+    })
+  }
+
+  const visitedBy = new Map<Id, Scene[]>()
+  for (const scene of Object.values(project.scenes)) {
+    for (const target of visits.get(scene.id) ?? []) {
+      const list = visitedBy.get(target) ?? []
+      if (!list.includes(scene)) list.push(scene)
+      visitedBy.set(target, list)
+    }
+  }
+  for (const [id, visitors] of visitedBy) {
+    const sub = project.scenes[id]
+    if (sub.ending.type !== 'end') {
+      add({
+        severity: 'warning',
+        message: `${sceneOf(sub)} is visited as a sub-scene but does not end the story; it will continue into whatever it points to.`,
+        sceneId: sub.id
+      })
+    }
+    if (id === project.startSceneId) {
+      add({
+        severity: 'warning',
+        message: `${sceneOf(sub)} is the start scene and is also visited as a sub-scene by ${visitors.map(sceneOf).join(', ')}. Visit a separate scene instead.`,
+        sceneId: sub.id
+      })
+    }
+  }
+
   if (startOk) {
     const reachable = new Set<Id>([project.startSceneId as Id])
-    const edges = deriveEdges(project)
     const queue: Id[] = [project.startSceneId as Id]
     while (queue.length > 0) {
       const from = queue.shift() as Id
-      for (const edge of edges) {
-        if (edge.source === from && !reachable.has(edge.target)) {
-          reachable.add(edge.target)
-          queue.push(edge.target)
+      for (const to of sceneSuccessors(project, from)) {
+        if (!reachable.has(to)) {
+          reachable.add(to)
+          queue.push(to)
         }
       }
     }

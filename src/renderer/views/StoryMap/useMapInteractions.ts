@@ -10,7 +10,7 @@ import {
   type OnBeforeDelete
 } from '@xyflow/react'
 import type { Id, Project } from '@shared/model'
-import { deriveEdges } from '@shared/edges'
+import { deriveEdges, deriveVisitEdges } from '@shared/edges'
 import { copyScenes, pasteScenes } from '@shared/sceneClipboard'
 import { validateProject } from '@shared/validate'
 import { toast } from '../../components/Toast'
@@ -22,6 +22,7 @@ import { useMapUi } from './mapUi'
 import type { SceneFlowNode, SceneNodeData } from './SceneNode'
 
 export const EDGE_COLOR = '#7d8599'
+export const VISIT_EDGE_COLOR = '#6b7080'
 
 export type MapMenu =
   | { kind: 'node'; x: number; y: number; sceneId: Id }
@@ -92,6 +93,7 @@ export function useMapInteractions(wrapperRef: RefObject<HTMLDivElement | null>,
   const distances = useMemo(() => distancesFromStart(project), [project])
   const matches = useMemo(() => matchingSceneIds(project, query), [project, query])
   const baseEdges = useMemo(() => deriveEdges(project), [project])
+  const visitEdges = useMemo(() => deriveVisitEdges(project), [project])
 
   const dataCache = useRef(new Map<Id, SceneNodeData>())
   const nodes = useMemo<SceneFlowNode[]>(() => {
@@ -135,6 +137,34 @@ export function useMapInteractions(wrapperRef: RefObject<HTMLDivElement | null>,
       selected: selected.has(e.id)
     }))
   }, [baseEdges, selectedEdgeIds])
+
+  // Visit blocks draw thin dotted grey arrows to the sub-scene. They come from blocks, so they cannot be selected, reconnected or deleted here.
+  const visitFlowEdges = useMemo<Edge[]>(() => {
+    const seen = new Set<string>()
+    const out: Edge[] = []
+    for (const e of visitEdges) {
+      const pair = `${e.source}>${e.target}`
+      if (seen.has(pair)) continue
+      seen.add(pair)
+      out.push({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.handle,
+        targetHandle: 'in',
+        type: 'smoothstep',
+        markerEnd: { type: MarkerType.ArrowClosed, color: VISIT_EDGE_COLOR, width: 12, height: 12 },
+        className: 'edge-visit',
+        selectable: false,
+        deletable: false,
+        focusable: false,
+        reconnectable: false,
+        interactionWidth: 0
+      })
+    }
+    return out
+  }, [visitEdges])
+  const allEdges = useMemo(() => [...edges, ...visitFlowEdges], [edges, visitFlowEdges])
 
   // ----- store actions -----
   const S = useProjectStore.getState
@@ -407,7 +437,7 @@ export function useMapInteractions(wrapperRef: RefObject<HTMLDivElement | null>,
 
   return {
     nodes,
-    edges,
+    edges: allEdges,
     matchCount: matches.length,
     menu,
     closeMenu: useCallback(() => setMenu(null), []),

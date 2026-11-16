@@ -13,6 +13,7 @@ import type {
   Effect,
   Expression,
   Id,
+  InlineChoiceOption,
   Project,
   Scalar,
   Scene,
@@ -98,7 +99,17 @@ export function createBlock(type: CreatableBlockType): Block {
       return { id, type, action: 'hide' }
     case 'clearPage':
       return { id, type }
+    case 'visit':
+      return { id, type, sceneId: null }
+    case 'if':
+      return { id, type, condition: createCondition(), then: [], otherwise: [] }
+    case 'inlineChoice':
+      return { id, type, prompt: null, options: [createInlineOption(), createInlineOption()] }
   }
+}
+
+export function createInlineOption(text = ''): InlineChoiceOption {
+  return { id: newId(), text, condition: null, blocks: [] }
 }
 
 export function createEffect(variableId: Id | null = null): Effect {

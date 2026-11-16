@@ -25,6 +25,9 @@ export const PALETTE: PaletteEntry[] = [
 
 /** The "More" group of the palette. */
 export const MORE_PALETTE: PaletteEntry[] = [
+  { key: 'visit', type: 'visit', label: 'Visit scene' },
+  { key: 'if', type: 'if', label: 'If' },
+  { key: 'inlineChoice', type: 'inlineChoice', label: 'Choice (stay in scene)' },
   { key: 'ask', type: 'ask', label: 'Ask the player' },
   { key: 'movie', type: 'movie', label: 'Movie' },
   { key: 'window', type: 'window', label: 'Text box show/hide' },

@@ -605,8 +605,11 @@ describe('factory, schema and palette', () => {
       expect(blockSchema.safeParse(createBlock(t)).success, t).toBe(true)
     }
   })
-  it('the More group offers the four blocks in order', () => {
+  it('the More group offers the Phase 10 blocks in order (Phase 11 put Visit, If and Choice before them)', () => {
     expect(MORE_PALETTE.map((e) => [e.label, e.type])).toEqual([
+      ['Visit scene', 'visit'],
+      ['If', 'if'],
+      ['Choice (stay in scene)', 'inlineChoice'],
       ['Ask the player', 'ask'],
       ['Movie', 'movie'],
       ['Text box show/hide', 'window'],

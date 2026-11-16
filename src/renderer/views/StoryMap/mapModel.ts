@@ -1,6 +1,7 @@
-import type { Block, Id, Project, Scene } from '@shared/model'
+import { countBlocks, firstSayText, walkBlocks } from '@shared/blockTree'
+import type { Id, Project, Scene } from '@shared/model'
 import { conditionToWords } from '@shared/conditions'
-import { deriveEdges, listExits } from '@shared/edges'
+import { deriveEdges, deriveVisitEdges, listExits } from '@shared/edges'
 
 /** One row of a scene card. `handleId` is the React Flow source handle id (see listExits). */
 export interface ExitRowInfo {
@@ -26,18 +27,6 @@ export const ARROW_LABEL_MAX = 24
 
 export function truncate(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text
-}
-
-function walkBlocks(blocks: Block[], fn: (b: Block) => void): void {
-  for (const b of blocks) {
-    fn(b)
-    if (b.type === 'if') {
-      walkBlocks(b.then, fn)
-      walkBlocks(b.otherwise, fn)
-    } else if (b.type === 'inlineChoice') {
-      for (const o of b.options) walkBlocks(o.blocks, fn)
-    }
-  }
 }
 
 /** The rows a card shows for its ending: Then / each choice (+ if tag) / each case in words + Otherwise / named exits. */
@@ -72,7 +61,7 @@ export function sceneCardInfo(scene: Scene, project: Project): SceneCardInfo {
     }
   })
   const exits = buildExitRows(scene, project)
-  return { backgroundAssetId, firstLine, blockCount: scene.blocks.length, exits, isEnd: scene.ending.type === 'end' }
+  return { backgroundAssetId, firstLine, blockCount: countBlocks(scene.blocks), exits, isEnd: scene.ending.type === 'end' }
 }
 
 /** Case-insensitive match on the scene name and on every dialogue line. An empty query matches nothing. */
@@ -98,7 +87,7 @@ export function matchingSceneIds(project: Project, query: string): Id[] {
 /** How many arrows from scenes outside `ids` point into `ids` (they become empty exits when the scenes are deleted). */
 export function countArrowsInto(project: Project, ids: readonly Id[]): number {
   const gone = new Set(ids)
-  return deriveEdges(project).filter((e) => gone.has(e.target) && !gone.has(e.source)).length
+  return [...deriveEdges(project), ...deriveVisitEdges(project)].filter((e) => gone.has(e.target) && !gone.has(e.source)).length
 }
 
 export const CHAPTER_PALETTE = ['#7c9cff', '#5fd08a', '#f2b84b', '#ff8a65', '#c792ea', '#4dd0e1', '#f06292', '#aed581'] as const

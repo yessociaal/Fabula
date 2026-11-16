@@ -500,3 +500,109 @@
 .lock-status.bad {
   color: var(--danger);
 }
+
+/* Nested blocks: If and Choice areas */
+
+.block-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.block-item > .insert-line {
+  top: -4px;
+}
+
+.insert-line.refused {
+  background: var(--danger);
+}
+
+.block-row.block-container {
+  border-left-color: var(--accent);
+}
+
+.block-ghost {
+  background: var(--panel-2);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  cursor: grabbing;
+  min-width: 240px;
+}
+
+.block-areas {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-left: 22px;
+}
+
+.block-area {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 10px;
+  border-left: 2px solid var(--line);
+}
+
+.area-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.area-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.area-head .option-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.area-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.area-end {
+  position: relative;
+  min-height: 12px;
+  border-radius: var(--radius);
+}
+
+.area-end.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 40px;
+  color: var(--muted);
+  border: 1px dashed var(--line);
+}
+
+.area-end.over {
+  border: 1px dashed var(--accent);
+}
+
+.area-add {
+  padding-left: 12px;
+}
+
+.inline-option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.inline-option-row .option-text {
+  flex: 1;
+  min-width: 0;
+}

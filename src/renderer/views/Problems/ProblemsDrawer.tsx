@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { AlertTriangle, CircleAlert, X } from 'lucide-react'
+import { findBlock } from '@shared/blockTree'
 import type { Problem } from '@shared/validate'
 import { validateProject } from '@shared/validate'
 import { IconButton } from '../../components/IconButton'
@@ -36,7 +37,10 @@ export function goToProblem(problem: Problem): void {
     ui.setView('map')
     return
   }
-  ui.openScene(problem.sceneId)
+  // The block may be nested inside an If or Choice: it is found by id wherever it is.
+  const project = useProjectStore.getState().project
+  const found = problem.blockId && project ? findBlock(project, problem.blockId) : null
+  ui.openScene(found ? found.sceneId : problem.sceneId)
   if (problem.blockId) ui.selectBlock(problem.blockId)
   highlightProblem(problem)
 }

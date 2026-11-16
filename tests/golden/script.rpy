@@ -143,7 +143,40 @@ label cutscene_intro:
 
     "After the movie."
 
+    jump cellar_tour
+
+
+label cellar_tour:
+
+    call cellar
+
+    anna "Down we go."
+
+    menu:
+
+        anna "What now?"
+
+        "Look around":
+            if has_key:
+                call cellar
+            else:
+                "Too dark to see."
+
+        "Leave" if courage >= 1:
+            pass
+
+    "Back above ground."
+
     jump the_end
+
+
+label cellar:
+
+    pause 0.5
+
+    "Dust everywhere."
+
+    return
 
 
 label splashscreen:

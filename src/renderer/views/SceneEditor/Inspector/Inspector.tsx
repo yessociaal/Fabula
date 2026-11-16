@@ -1,4 +1,5 @@
 import { Copy, Trash2 } from 'lucide-react'
+import { findBlockPath, getBlockAt, splitPath, type BlockPath } from '@shared/blockTree'
 import type { Block, Id } from '@shared/model'
 import { Button } from '../../../components/Button'
 import { useProjectStore } from '../../../store/projectStore'
@@ -10,6 +11,8 @@ import { BackgroundInspector } from './BackgroundInspector'
 import { ClearPageInspector } from './ClearPageInspector'
 import { DialogueInspector } from './DialogueInspector'
 import { HideInspector } from './HideInspector'
+import { IfInspector } from './IfInspector'
+import { InlineChoiceInspector } from './InlineChoiceInspector'
 import { MovieInspector } from './MovieInspector'
 import { PauseInspector } from './PauseInspector'
 import { PlayMusicInspector } from './PlayMusicInspector'
@@ -18,10 +21,11 @@ import { ShowInspector } from './ShowInspector'
 import { StopMusicInspector } from './StopMusicInspector'
 import { TransitionInspector } from './TransitionInspector'
 import { VariableInspector } from './VariableInspector'
+import { VisitInspector } from './VisitInspector'
 import { WindowInspector } from './WindowInspector'
 
-function Fields({ sceneId, block, index }: { sceneId: Id; block: Block; index: number }) {
-  const p = { sceneId, index }
+function Fields({ sceneId, block, path }: { sceneId: Id; block: Block; path: BlockPath }) {
+  const p = { sceneId, index: splitPath(path).index, path }
   switch (block.type) {
     case 'say':
       return <DialogueInspector {...p} block={block} />
@@ -51,6 +55,12 @@ function Fields({ sceneId, block, index }: { sceneId: Id; block: Block; index: n
       return <WindowInspector {...p} block={block} />
     case 'clearPage':
       return <ClearPageInspector {...p} block={block} />
+    case 'visit':
+      return <VisitInspector {...p} block={block} />
+    case 'if':
+      return <IfInspector {...p} block={block} />
+    case 'inlineChoice':
+      return <InlineChoiceInspector {...p} block={block} />
     default:
       return <p className="muted-note">This kind of block cannot be edited here yet.</p>
   }
@@ -59,10 +69,10 @@ function Fields({ sceneId, block, index }: { sceneId: Id; block: Block; index: n
 export function Inspector({ sceneId }: { sceneId: Id }) {
   const scene = useProjectStore((s) => s.project?.scenes[sceneId])
   const selectedId = useUiStore((s) => s.selectedBlockId)
-  const index = scene && selectedId ? scene.blocks.findIndex((b) => b.id === selectedId) : -1
-  const block = index >= 0 ? scene?.blocks[index] : undefined
+  const path = scene && selectedId ? findBlockPath(scene.blocks, selectedId) : null
+  const block = scene && path ? getBlockAt(scene.blocks, path) : undefined
 
-  if (!block) {
+  if (!block || !path) {
     return (
       <div className="inspector">
         <h3 className="panel-heading">Inspector</h3>
@@ -74,7 +84,7 @@ export function Inspector({ sceneId }: { sceneId: Id }) {
     <div className="inspector">
       <h3 className="panel-heading">Inspector — {blockKindLabel(block)}</h3>
       <div className="inspector-fields" key={block.id}>
-        <Fields sceneId={sceneId} block={block} index={index} />
+        <Fields sceneId={sceneId} block={block} path={path} />
       </div>
       <div className="inspector-actions">
         <Button icon={<Copy size={15} />} onClick={() => duplicateSelected(sceneId)} title="Duplicate this block (Ctrl+D)">

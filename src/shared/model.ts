@@ -249,5 +249,5 @@ export type CoreBlockType = CoreBlock['type']
 export type CoreEndingType = CoreEnding['type']
 
 /** Extra block types the palette can create (the rest of ExtraBlock arrives in later phases). */
-export type NewExtraBlockType = 'ask' | 'movie' | 'window' | 'clearPage'
+export type NewExtraBlockType = 'ask' | 'movie' | 'window' | 'clearPage' | 'visit' | 'if' | 'inlineChoice'
 export type CreatableBlockType = CoreBlockType | NewExtraBlockType

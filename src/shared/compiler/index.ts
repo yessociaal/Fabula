@@ -2,7 +2,7 @@ import type { Id, Project, Scene } from '../model'
 import { buildNameTable, sceneOrder } from '../naming'
 import type { AssetCopy } from './assets'
 import { lookupAsset, sidePath } from './assets'
-import { emitBlock } from './blocks'
+import { emitBlocks, indentLines } from './blocks'
 import type { CompileContext } from './blocks'
 import { emitEnding } from './ending'
 import { pythonString, pythonValue } from './text'
@@ -19,11 +19,7 @@ interface Section {
 }
 
 function emitScene(scene: Scene, ctx: CompileContext): string {
-  const statements: string[] = []
-  for (const block of scene.blocks) {
-    const line = emitBlock(block, ctx)
-    if (line !== null) statements.push(line.split('\n').map((l) => `    ${l}`).join('\n'))
-  }
+  const statements = emitBlocks(scene.blocks, ctx).map((text) => indentLines(text))
   const ending = emitEnding(scene.ending, ctx)
   if (ending !== null) statements.push(ending)
   return [`label ${ctx.names.sceneLabels[scene.id]}:`, ...statements].join('\n\n')

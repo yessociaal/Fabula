@@ -1,33 +1,37 @@
 import { useMemo } from 'react'
+import { findBlockPath, getBlockAt, type BlockPath } from '@shared/blockTree'
 import type { Scene } from '@shared/model'
 import { customPlacementFor } from '@shared/placement'
-import { computeStage } from '@shared/stage'
-import { dialogueFor, sceneSetsBackground } from '@shared/stageView'
+import { appliedBlocks, computeStageAt } from '@shared/stage'
+import { dialogueFor, sceneSetsBackgroundAt } from '@shared/stageView'
 import { Stage, type StageDrag } from '../../components/Stage'
 import { pauseHistory, resumeHistory, useProjectStore } from '../../store/projectStore'
 import { useUiStore } from '../../store/uiStore'
 
-/** The stage preview: what the audience sees right after the selected block (or after the last block when none is selected). */
+/**
+ * The stage preview: what the audience sees right after the selected block (or after the last top-level block when none is selected).
+ * Blocks inside If and Choice blocks follow the nesting rule documented on `appliedBlocks` in shared/stage.ts.
+ */
 export function EditorStage({ scene }: { scene: Scene }) {
   const project = useProjectStore((s) => s.project)!
   const dir = useProjectStore((s) => s.dir)
   const selectedBlockId = useUiStore((s) => s.selectedBlockId)
 
-  const selected = selectedBlockId ? scene.blocks.findIndex((b) => b.id === selectedBlockId) : -1
-  const index = selected >= 0 ? selected : scene.blocks.length - 1
-  const block = index >= 0 ? scene.blocks[index] : undefined
+  const selectedPath = selectedBlockId ? findBlockPath(scene.blocks, selectedBlockId) : null
+  const path: BlockPath = selectedPath ?? (scene.blocks.length > 0 ? [{ i: scene.blocks.length - 1 }] : [])
+  const block = path.length > 0 ? getBlockAt(scene.blocks, path) : undefined
+  const pathText = JSON.stringify(path)
 
-  const stage = useMemo(() => computeStage(project, scene.id, index), [project, scene.id, index])
+  const stage = useMemo(() => computeStageAt(project, scene.id, path), [project, scene.id, pathText]) // eslint-disable-line react-hooks/exhaustive-deps
   const dialogue = block && block.type === 'say' ? dialogueFor(project, block.characterId, block.text) : null
   const ambient = useMemo(() => {
     let current: string | null = null
-    for (let i = 0; i <= index && i < scene.blocks.length; i++) {
-      const b = scene.blocks[i]
+    for (const b of appliedBlocks(scene.blocks, path)) {
       if (b.type === 'playMusic' && b.channel === 'ambient') current = b.assetId
       if (b.type === 'stopMusic' && b.channel === 'ambient') current = null
     }
     return current
-  }, [scene.blocks, index])
+  }, [scene.blocks, pathText]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // The sprite of the selected Show block can be dragged on the stage. One drag is one undo step.
   const drag: StageDrag | null =
@@ -41,10 +45,12 @@ export function EditorStage({ scene }: { scene: Scene }) {
             }
           },
           onMove: (xalign, yalign) => {
-            const current = useProjectStore.getState().project?.scenes[scene.id]?.blocks.find((b) => b.id === block.id)
-            if (!current || current.type !== 'show' || current.placement.mode !== 'custom') return
-            if (current.placement.xalign === xalign && current.placement.yalign === yalign) return
-            useProjectStore.getState().updateBlock(scene.id, block.id, { placement: { ...current.placement, xalign, yalign } })
+            const current = useProjectStore.getState().project?.scenes[scene.id]
+            const at = current ? findBlockPath(current.blocks, block.id) : null
+            const live = current && at ? getBlockAt(current.blocks, at) : undefined
+            if (!live || live.type !== 'show' || live.placement.mode !== 'custom') return
+            if (live.placement.xalign === xalign && live.placement.yalign === yalign) return
+            useProjectStore.getState().updateBlock(scene.id, block.id, { placement: { ...live.placement, xalign, yalign } })
           },
           onEnd: () => resumeHistory()
         }
@@ -58,7 +64,7 @@ export function EditorStage({ scene }: { scene: Scene }) {
         characters={project.characters}
         dir={dir}
         dialogue={dialogue}
-        carryOverNote={!sceneSetsBackground(project, scene.id, index)}
+        carryOverNote={!sceneSetsBackgroundAt(project, scene.id, path)}
         ambientName={ambient ? (project.assets[ambient]?.name ?? 'Missing sound') : null}
         drag={drag}
       />

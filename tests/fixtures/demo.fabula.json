@@ -768,7 +768,7 @@
       ],
       "ending": {
         "type": "jump",
-        "target": "s_end"
+        "target": "s_tour"
       },
       "labelLock": "cutscene_intro",
       "role": "normal"
@@ -796,6 +796,136 @@
       },
       "labelLock": null,
       "role": "splashscreen"
+    },
+    "s_cellar": {
+      "id": "s_cellar",
+      "name": "Cellar",
+      "notes": "",
+      "position": {
+        "x": 0,
+        "y": 540
+      },
+      "chapterId": null,
+      "blocks": [
+        {
+          "id": "cl01",
+          "type": "pause",
+          "seconds": 0.5
+        },
+        {
+          "id": "cl02",
+          "type": "say",
+          "characterId": null,
+          "text": "Dust everywhere.",
+          "voiceAssetId": null
+        }
+      ],
+      "ending": {
+        "type": "end"
+      },
+      "labelLock": null,
+      "role": "normal"
+    },
+    "s_tour": {
+      "id": "s_tour",
+      "name": "Cellar tour",
+      "notes": "",
+      "position": {
+        "x": 0,
+        "y": 520
+      },
+      "chapterId": null,
+      "blocks": [
+        {
+          "id": "tr01",
+          "type": "visit",
+          "sceneId": "s_cellar"
+        },
+        {
+          "id": "tr02",
+          "type": "say",
+          "characterId": "c_anna",
+          "text": "Down we go.",
+          "voiceAssetId": null
+        },
+        {
+          "id": "tr03",
+          "type": "inlineChoice",
+          "prompt": {
+            "characterId": "c_anna",
+            "text": "What now?"
+          },
+          "options": [
+            {
+              "id": "to1",
+              "text": "Look around",
+              "condition": null,
+              "blocks": [
+                {
+                  "id": "tr04",
+                  "type": "if",
+                  "condition": {
+                    "join": "and",
+                    "clauses": [
+                      {
+                        "id": "tk1",
+                        "variableId": "v_key",
+                        "op": "eq",
+                        "value": true
+                      }
+                    ]
+                  },
+                  "then": [
+                    {
+                      "id": "tr05",
+                      "type": "visit",
+                      "sceneId": "s_cellar"
+                    }
+                  ],
+                  "otherwise": [
+                    {
+                      "id": "tr06",
+                      "type": "say",
+                      "characterId": null,
+                      "text": "Too dark to see.",
+                      "voiceAssetId": null
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "to2",
+              "text": "Leave",
+              "condition": {
+                "join": "and",
+                "clauses": [
+                  {
+                    "id": "tk2",
+                    "variableId": "v_courage",
+                    "op": "gte",
+                    "value": 1
+                  }
+                ]
+              },
+              "blocks": []
+            }
+          ]
+        },
+        {
+          "id": "tr07",
+          "type": "say",
+          "characterId": null,
+          "text": "Back above ground.",
+          "voiceAssetId": null
+        }
+      ],
+      "ending": {
+        "type": "jump",
+        "target": "s_end"
+      },
+      "labelLock": null,
+      "role": "normal"
     }
   },
   "chapters": {

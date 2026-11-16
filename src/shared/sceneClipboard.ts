@@ -1,21 +1,10 @@
-import type { Block, Id, Project, Scene } from './model'
+import { walkBlocks } from './blockTree'
+import type { Id, Project, Scene } from './model'
 import { cloneWithNewIds, newId } from './factory'
 import { listExits, setExitTarget } from './edges'
 
 export interface SceneClipboard {
   scenes: Scene[]
-}
-
-function walkBlocks(blocks: Block[], fn: (b: Block) => void): void {
-  for (const b of blocks) {
-    fn(b)
-    if (b.type === 'if') {
-      walkBlocks(b.then, fn)
-      walkBlocks(b.otherwise, fn)
-    } else if (b.type === 'inlineChoice') {
-      for (const o of b.options) walkBlocks(o.blocks, fn)
-    }
-  }
 }
 
 /** Deep copy of the chosen scenes (in the given order; unknown ids are ignored). */

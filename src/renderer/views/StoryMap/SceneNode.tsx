@@ -1,6 +1,7 @@
 import { memo, useEffect, useMemo, useRef } from 'react'
 import { Handle, Position, useUpdateNodeInternals, type Node, type NodeProps } from '@xyflow/react'
 import { AlertTriangle, OctagonAlert, Play } from 'lucide-react'
+import { visitTargets } from '@shared/blockTree'
 import type { Id } from '@shared/model'
 import { AssetThumb } from '../../components/AssetThumb'
 import { plural } from '../../util'
@@ -83,10 +84,11 @@ function SceneNodeView({ data, selected }: NodeProps<SceneFlowNode>) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scene, characters, variables, screens])
 
+  const hasVisits = useMemo(() => (scene ? visitTargets(scene.blocks).length > 0 : false), [scene])
   const handleKey = info ? info.exits.map((r) => r.handleId).join('|') : ''
   useEffect(() => {
     updateNodeInternals(sceneId)
-  }, [handleKey, sceneId, updateNodeInternals])
+  }, [handleKey, hasVisits, sceneId, updateNodeInternals])
 
   if (!scene || !info) return null
 
@@ -104,6 +106,7 @@ function SceneNodeView({ data, selected }: NodeProps<SceneFlowNode>) {
     <div className={classes} title={data.unreachable ? 'No path from the start scene leads here' : undefined}>
       <div className="scene-strip" style={{ background: chapterColor ?? 'transparent' }} />
       <Handle type="target" position={Position.Left} id="in" className="in-handle" />
+      {hasVisits && <Handle type="source" position={Position.Right} id="visit" className="visit-handle" isConnectable={false} />}
       <div className="scene-header">
         {isStart && (
           <span className="badge-start" title="Start scene">

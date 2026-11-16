@@ -1,11 +1,14 @@
+import type { BlockPath } from '@shared/blockTree'
 import type { Block, Id } from '@shared/model'
 import { useProjectStore } from '../../../store/projectStore'
 
 export interface InspectorProps<T extends Block> {
   sceneId: Id
   block: T
-  /** Position of the block in its scene. */
+  /** Position of the block in its own list (the last step of `path`). */
   index: number
+  /** Where the block is in the scene's tree of blocks. */
+  path: BlockPath
 }
 
 /** Returns a function that patches this block through the store. */

@@ -32,6 +32,22 @@ import {
   defaultValueFor
 } from '@shared/factory'
 import { listExits, setExitTarget as setExitTargetOn } from '@shared/edges'
+import {
+  DEPTH_ERROR,
+  blockHeight,
+  containersEqual,
+  findBlockPath,
+  fitsDepth,
+  getBlockAt,
+  isInsidePath,
+  resolveList,
+  splitPath,
+  walkBlocks,
+  type BlockPath
+} from '@shared/blockTree'
+
+/** What a block action reports: the new block's id (when there is one), or a message the UI shows as a toast. */
+export type BlockResult = { ok: true; id: Id | null } | { ok: false; error: string }
 
 type Position = { x: number; y: number }
 type Patch<T> = Partial<Omit<T, 'id'>>
@@ -62,10 +78,25 @@ export interface ProjectState {
   /** Lock the exported label to exactly this text, or pass null to go back to the automatic one. The text is not checked here: see `labelLockProblem`. */
   setLabelLock(sceneId: Id, label: string | null): void
 
-  addBlock(sceneId: Id, type: CreatableBlockType, index?: number): Id | null
+  /**
+   * Add a block. `at` is an index in the scene's own list, or a block path (see blockTree.ts) whose last step is the
+   * insertion index and whose earlier steps (each with `in`) lead to the list to insert into. Returns null when
+   * refused (no such scene or list, or nested deeper than MAX_BLOCK_DEPTH); `addBlockAt` says why.
+   */
+  addBlock(sceneId: Id, type: CreatableBlockType, at?: number | BlockPath): Id | null
+  addBlockAt(sceneId: Id, type: CreatableBlockType, at: BlockPath): BlockResult
+  /** Blocks are found by id at any depth. */
   updateBlock<T extends Block = Block>(sceneId: Id, blockId: Id, patch: BlockPatch<T>): void
-  moveBlock(sceneId: Id, from: number, to: number): void
+  /**
+   * Move a block, as one undo step. Numbers are indices in the scene's own list and `to` is the index the block ends up at.
+   * With paths, `from` addresses the block and `to` is an insertion position: its last step is the index to insert before,
+   * counted in the list as it is BEFORE the block is taken out; its earlier steps (each with `in`) lead to the destination list.
+   * Refused when the block would end up inside itself or nested deeper than MAX_BLOCK_DEPTH.
+   */
+  moveBlock(sceneId: Id, from: number | BlockPath, to: number | BlockPath): BlockResult
+  /** Deletes the block and everything inside it. */
   deleteBlock(sceneId: Id, blockId: Id): void
+  /** The copy (with fresh ids all the way down) goes right after the original, in the same list. */
   duplicateBlock(sceneId: Id, blockId: Id): Id | null
 
   setEnding(sceneId: Id, ending: Ending): void
@@ -105,27 +136,21 @@ export interface ProjectState {
 
 // ---------- helpers that walk the project (blocks can nest) ----------
 
-function walkBlocks(blocks: Block[], fn: (b: Block) => void): void {
-  for (const b of blocks) {
+function eachBlock(blocks: Block[], fn: (b: Block) => void): void {
+  walkBlocks(blocks, (b) => {
     fn(b)
-    if (b.type === 'if') {
-      walkBlocks(b.then, fn)
-      walkBlocks(b.otherwise, fn)
-    } else if (b.type === 'inlineChoice') {
-      for (const o of b.options) walkBlocks(o.blocks, fn)
-    }
-  }
+  })
 }
 
 function forEachBlock(project: Project, fn: (b: Block) => void): void {
-  for (const s of Object.values(project.scenes)) walkBlocks(s.blocks, fn)
+  for (const s of Object.values(project.scenes)) eachBlock(s.blocks, fn)
 }
 
 function forEachCondition(project: Project, fn: (c: Condition) => void): void {
   for (const s of Object.values(project.scenes)) {
     if (s.ending.type === 'choice') for (const o of s.ending.options) if (o.condition) fn(o.condition)
     if (s.ending.type === 'branch') for (const c of s.ending.cases) fn(c.condition)
-    walkBlocks(s.blocks, (b) => {
+    eachBlock(s.blocks, (b) => {
       if (b.type === 'if') fn(b.condition)
       if (b.type === 'inlineChoice') for (const o of b.options) if (o.condition) fn(o.condition)
     })
@@ -135,7 +160,7 @@ function forEachCondition(project: Project, fn: (c: Condition) => void): void {
 function forEachEffect(project: Project, fn: (e: Effect) => void): void {
   for (const s of Object.values(project.scenes)) {
     if (s.ending.type === 'choice') for (const o of s.ending.options) o.effects.forEach(fn)
-    walkBlocks(s.blocks, (b) => {
+    eachBlock(s.blocks, (b) => {
       if (b.type === 'setVariable') fn(b.effect)
     })
   }
@@ -235,7 +260,7 @@ export const useProjectStore = create<ProjectState>()(
               for (const x of listExits(scene, p)) {
                 if (x.target !== null && gone.has(x.target)) setExitTargetOn(scene, x.handleId, null)
               }
-              walkBlocks(scene.blocks, (b) => {
+              eachBlock(scene.blocks, (b) => {
                 if (b.type === 'visit' && b.sceneId !== null && gone.has(b.sceneId)) b.sceneId = null
               })
             }
@@ -283,41 +308,89 @@ export const useProjectStore = create<ProjectState>()(
         },
 
         // ----- blocks -----
-        addBlock(sceneId, type, index) {
-          if (!findScene(get().project, sceneId)) return null
+        addBlock(sceneId, type, at) {
+          const path: BlockPath = typeof at === 'number' ? [{ i: at }] : (at ?? [{ i: Number.MAX_SAFE_INTEGER }])
+          const result = get().addBlockAt(sceneId, type, path)
+          return result.ok ? result.id : null
+        },
+        addBlockAt(sceneId, type, at) {
+          const scene = findScene(get().project, sceneId)
+          if (!scene) return { ok: false, error: 'That scene no longer exists.' }
+          const list = at.length === 0 ? undefined : resolveList(scene.blocks, splitPath(at).container)
+          if (!list) return { ok: false, error: 'There is nowhere to put the block there.' }
           const block = createBlock(type)
+          if (!fitsDepth(at.length, blockHeight(block))) return { ok: false, error: DEPTH_ERROR }
           mutateScene(sceneId, (s) => {
-            const at = index === undefined ? s.blocks.length : Math.max(0, Math.min(index, s.blocks.length))
-            s.blocks.splice(at, 0, block)
+            const target = resolveList(s.blocks, splitPath(at).container)
+            if (!target) return
+            target.splice(Math.max(0, Math.min(splitPath(at).index, target.length)), 0, block)
           })
-          return block.id
+          return { ok: true, id: block.id }
         },
         updateBlock(sceneId, blockId, patch) {
           mutateScene(sceneId, (s) => {
-            const b = s.blocks.find((x) => x.id === blockId)
+            const path = findBlockPath(s.blocks, blockId)
+            const b = path ? getBlockAt(s.blocks, path) : undefined
             if (b) Object.assign(b, patch)
           })
         },
         moveBlock(sceneId, from, to) {
+          const scene = findScene(get().project, sceneId)
+          if (!scene) return { ok: false, error: 'That scene no longer exists.' }
+          let fromPath: BlockPath
+          let toPath: BlockPath
+          if (typeof from === 'number' && typeof to === 'number') {
+            const last = scene.blocks.length - 1
+            const final = Math.max(0, Math.min(to, last))
+            fromPath = [{ i: from }]
+            toPath = [{ i: from < final ? final + 1 : final }]
+          } else if (typeof from !== 'number' && typeof to !== 'number') {
+            fromPath = from
+            toPath = to
+          } else {
+            return { ok: false, error: 'Move needs two block paths or two indexes.' }
+          }
+          const block = getBlockAt(scene.blocks, fromPath)
+          if (!block) return { ok: false, error: 'That block no longer exists.' }
+          if (toPath.length === 0) return { ok: false, error: 'There is nowhere to put the block there.' }
+          if (toPath.length > fromPath.length && isInsidePath(toPath, fromPath)) {
+            return { ok: false, error: "A block can't be moved into itself." }
+          }
+          const dest = splitPath(toPath)
+          const source = splitPath(fromPath)
+          const destList = resolveList(scene.blocks, dest.container)
+          if (!destList) return { ok: false, error: 'There is nowhere to put the block there.' }
+          if (!fitsDepth(toPath.length, blockHeight(block))) return { ok: false, error: DEPTH_ERROR }
+          const sameList = containersEqual(source.container, dest.container)
+          const insertion = Math.max(0, Math.min(dest.index, destList.length))
+          if (sameList && (insertion === source.index || insertion === source.index + 1)) return { ok: true, id: block.id }
           mutateScene(sceneId, (s) => {
-            if (from < 0 || from >= s.blocks.length) return
-            const [b] = s.blocks.splice(from, 1)
-            s.blocks.splice(Math.max(0, Math.min(to, s.blocks.length)), 0, b)
+            const fromList = resolveList(s.blocks, source.container)
+            const toList = resolveList(s.blocks, dest.container)
+            if (!fromList || !toList) return
+            const [moved] = fromList.splice(source.index, 1)
+            const at = sameList && source.index < insertion ? insertion - 1 : insertion
+            toList.splice(Math.max(0, Math.min(at, toList.length)), 0, moved)
           })
+          return { ok: true, id: block.id }
         },
         deleteBlock(sceneId, blockId) {
           mutateScene(sceneId, (s) => {
-            s.blocks = s.blocks.filter((b) => b.id !== blockId)
+            const path = findBlockPath(s.blocks, blockId)
+            if (!path) return
+            const { container, index } = splitPath(path)
+            resolveList(s.blocks, container)?.splice(index, 1)
           })
         },
         duplicateBlock(sceneId, blockId) {
           const scene = findScene(get().project, sceneId)
-          const src = scene?.blocks.find((b) => b.id === blockId)
-          if (!src) return null
+          const path = scene ? findBlockPath(scene.blocks, blockId) : null
+          const src = scene && path ? getBlockAt(scene.blocks, path) : undefined
+          if (!src || !path) return null
           const copy = cloneWithNewIds(JSON.parse(JSON.stringify(src)) as Block)
           mutateScene(sceneId, (s) => {
-            const at = s.blocks.findIndex((b) => b.id === blockId)
-            s.blocks.splice(at + 1, 0, copy)
+            const { container, index } = splitPath(path)
+            resolveList(s.blocks, container)?.splice(index + 1, 0, copy)
           })
           return copy.id
         },

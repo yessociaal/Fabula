@@ -1,5 +1,5 @@
 import type { Id, Project, Scene } from '@shared/model'
-import { listExits } from '@shared/edges'
+import { listExits, sceneSuccessors } from '@shared/edges'
 
 export const CARD_WIDTH = 240
 export const COLUMN_GAP = 120
@@ -21,7 +21,7 @@ export function sceneCardHeight(scene: Scene, project: Project): number {
   return cardHeight(listExits(scene, project).length)
 }
 
-/** Shortest number of arrows from the start scene to each reachable scene (the start scene is 0). Empty when there is no start scene. */
+/** Shortest number of arrows (exits and Visit blocks) from the start scene to each reachable scene (the start scene is 0). Empty when there is no start scene. */
 export function distancesFromStart(project: Project): Map<Id, number> {
   const dist = new Map<Id, number>()
   const start = project.startSceneId
@@ -30,10 +30,10 @@ export function distancesFromStart(project: Project): Map<Id, number> {
   const queue: Id[] = [start]
   for (let i = 0; i < queue.length; i++) {
     const from = queue[i]
-    for (const x of listExits(project.scenes[from], project)) {
-      if (x.target === null || !project.scenes[x.target] || dist.has(x.target)) continue
-      dist.set(x.target, (dist.get(from) as number) + 1)
-      queue.push(x.target)
+    for (const target of sceneSuccessors(project, from)) {
+      if (dist.has(target)) continue
+      dist.set(target, (dist.get(from) as number) + 1)
+      queue.push(target)
     }
   }
   return dist

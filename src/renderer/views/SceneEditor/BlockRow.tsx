@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef } from 'react'
-import { useSortable } from '@dnd-kit/sortable'
+import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { GripVertical } from 'lucide-react'
 import type { Block, Id, Project } from '@shared/model'
 import { DraftArea, type DraftAreaHandle } from '../../components/DraftArea'
@@ -20,12 +20,15 @@ interface BlockRowProps {
   project: Project
   selected: boolean
   problem: RowProblem | null
-  /** Draw the insertion line above this row (a palette entry is being dragged over it). */
-  lineBefore: boolean
 }
 
-function BlockRowInner({ block, sceneId, project, selected, problem, lineBefore }: BlockRowProps) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: block.id })
+/**
+ * One row of the block list. The row is both what you drag (by its handle) and a drop target (drop above or below it).
+ * Containers (If, Choice) draw their areas below this row; see BlockTree.
+ */
+function BlockRowInner({ block, sceneId, project, selected, problem }: BlockRowProps) {
+  const drag = useDraggable({ id: block.id, data: { kind: 'block' } })
+  const drop = useDroppable({ id: block.id, data: { kind: 'row' } })
   const selectBlock = useUiStore((s) => s.selectBlock)
   const updateBlock = useProjectStore((s) => s.updateBlock)
   const focusRequested = useFocusRequest((s) => s.blockId === block.id)
@@ -40,29 +43,40 @@ function BlockRowInner({ block, sceneId, project, selected, problem, lineBefore 
     }
   }, [focusRequested])
 
-  const cls = ['block-row', selected ? 'selected' : '', isDragging ? 'dragging' : '', problem ? `problem-${problem.severity}` : '']
+  const cls = [
+    'block-row',
+    block.type === 'if' || block.type === 'inlineChoice' ? 'block-container' : '',
+    selected ? 'selected' : '',
+    drag.isDragging ? 'dragging' : '',
+    problem ? `problem-${problem.severity}` : ''
+  ]
     .filter(Boolean)
     .join(' ')
 
   return (
     <div
-      ref={setNodeRef}
+      ref={(node) => {
+        drag.setNodeRef(node)
+        drop.setNodeRef(node)
+      }}
       className={cls}
       data-block-id={block.id}
-      style={{ transform: transform ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0)` : undefined, transition }}
+      data-block-type={block.type}
       title={problem?.message}
       aria-selected={selected}
-      onMouseDown={() => selectBlock(block.id)}
+      onMouseDown={(e) => {
+        e.stopPropagation()
+        selectBlock(block.id)
+      }}
     >
-      {lineBefore && <div className="insert-line" aria-hidden />}
       <button
         type="button"
-        ref={setActivatorNodeRef}
+        ref={drag.setActivatorNodeRef}
         className="row-handle"
-        aria-label="Drag to reorder"
-        title="Drag to reorder"
-        {...attributes}
-        {...listeners}
+        aria-label="Drag to move"
+        title="Drag to move"
+        {...drag.attributes}
+        {...drag.listeners}
       >
         <GripVertical size={16} />
       </button>

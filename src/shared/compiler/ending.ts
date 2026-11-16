@@ -1,5 +1,5 @@
 import type { Ending, Id } from '../model'
-import { conditionPython, emitEffect, sayText } from './blocks'
+import { conditionPython, emitEffect, promptLine, sayText } from './blocks'
 import type { CompileContext } from './blocks'
 
 const IND = '    '
@@ -8,12 +8,6 @@ function jumpLine(target: Id | null, ctx: CompileContext): string {
   if (target === null || !ctx.project.scenes[target]) return 'return'
   const label = ctx.names.sceneLabels[target]
   return label === undefined ? 'return' : `jump ${label}`
-}
-
-function promptLine(prompt: { characterId: Id | null; text: string }, ctx: CompileContext): string | null {
-  if (prompt.characterId === null) return sayText(prompt.text, ctx)
-  const tag = ctx.names.characters[prompt.characterId]
-  return tag === undefined ? null : `${tag} ${sayText(prompt.text, ctx)}`
 }
 
 /** One statement (possibly several lines, already indented) for the scene ending, or null for extended endings. */

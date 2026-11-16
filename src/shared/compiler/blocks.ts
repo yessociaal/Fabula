@@ -56,7 +56,40 @@ export function emitEffect(effect: Effect, ctx: CompileContext): string | null {
   }
 }
 
-/** One statement for a block, or null when the block is skipped. Extended blocks are skipped for now. */
+export const INDENT = '    '
+
+/** Indent every non-empty line of a statement by one level. */
+export function indentLines(text: string, levels = 1): string {
+  const pad = INDENT.repeat(levels)
+  return text
+    .split('\n')
+    .map((l) => (l === '' ? l : pad + l))
+    .join('\n')
+}
+
+export function promptLine(prompt: { characterId: Id | null; text: string }, ctx: CompileContext): string | null {
+  if (prompt.characterId === null) return sayText(prompt.text, ctx)
+  const tag = ctx.names.characters[prompt.characterId]
+  return tag === undefined ? null : `${tag} ${sayText(prompt.text, ctx)}`
+}
+
+/** The statements of a list of blocks (blocks that compile to nothing are left out). */
+export function emitBlocks(blocks: Block[], ctx: CompileContext): string[] {
+  const out: string[] = []
+  for (const block of blocks) {
+    const text = emitBlock(block, ctx)
+    if (text !== null) out.push(text)
+  }
+  return out
+}
+
+/** A nested body: statements separated by a blank line, indented one level. An empty body is `pass`. */
+function emitBody(blocks: Block[], ctx: CompileContext): string {
+  const statements = emitBlocks(blocks, ctx)
+  return indentLines(statements.length === 0 ? 'pass' : statements.join('\n\n'))
+}
+
+/** One statement for a block (several lines are relative to the block's own indent), or null when the block is skipped. */
 export function emitBlock(block: Block, ctx: CompileContext): string | null {
   const { project, names } = ctx
   switch (block.type) {
@@ -159,6 +192,30 @@ export function emitBlock(block: Block, ctx: CompileContext): string | null {
       return `window ${block.action}`
     case 'clearPage':
       return 'nvl clear'
+    case 'visit': {
+      const label = block.sceneId === null ? undefined : names.sceneLabels[block.sceneId]
+      return label === undefined || !project.scenes[block.sceneId as Id] ? null : `call ${label}`
+    }
+    case 'if': {
+      const lines = [`if ${conditionPython(block.condition, ctx)}:`, emitBody(block.then, ctx)]
+      if (block.otherwise.length > 0 && emitBlocks(block.otherwise, ctx).length > 0) {
+        lines.push('else:', emitBody(block.otherwise, ctx))
+      }
+      return lines.join('\n')
+    }
+    case 'inlineChoice': {
+      if (block.options.length === 0) return null
+      const items: string[] = []
+      if (block.prompt) {
+        const line = promptLine(block.prompt, ctx)
+        if (line !== null) items.push(indentLines(line))
+      }
+      for (const option of block.options) {
+        const guard = option.condition ? ` if ${conditionPython(option.condition, ctx)}` : ''
+        items.push(`${indentLines(`${sayText(option.text, ctx)}${guard}:`)}\n${indentLines(emitBody(option.blocks, ctx))}`)
+      }
+      return ['menu:', ...items].join('\n\n')
+    }
     default:
       return null
   }

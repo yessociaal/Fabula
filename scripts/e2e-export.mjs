@@ -109,7 +109,10 @@ async function main() {
       ['a custom placement', '        xalign 0.25'],
       ['a movie', 'renpy.movie_cutscene("movies/intro.webm")'],
       ['a splash screen', 'label splashscreen:'],
-      ['a persistent variable', 'default persistent.seen_ending = False']
+      ['a persistent variable', 'default persistent.seen_ending = False'],
+      ['a sub-scene call', '    call cellar\n'],
+      ['a call nested in an If inside a Choice option', '            if has_key:\n                call cellar\n            else:\n'],
+      ['an empty Choice option', '        "Leave" if courage >= 1:\n            pass\n']
     ]) {
       check(script.includes(needle), `the exported script contains ${what}`)
     }
@@ -159,6 +162,29 @@ async function main() {
     await stopByPid(gamePid)
     await sleep(1500)
     check(!alive(gamePid), `stopped only pid ${gamePid}; it is gone`)
+
+    // 6b. warp into the scene that visits a sub-scene, then into the sub-scene itself; each must stay up 10 s with no error files
+    for (const [id, what] of [
+      ['s_tour', 'the scene that visits a sub-scene (twice, once inside an If inside a Choice option)'],
+      ['s_cellar', 'the sub-scene itself']
+    ]) {
+      const loc = second.sceneLocations[id]
+      const w = { file: loc.file, line: loc.line + 1 }
+      console.log(`      launching with --warp ${w.file}:${w.line} (${what})`)
+      const startedAt = Date.now()
+      const lateErrors = []
+      const started = await runGame(sdk, gameDir, { warp: w, startupWaitMs: 3000, onLateError: (e) => lateErrors.push(e) })
+      gamePid = started.pid ?? null
+      check(started.ok === true && gamePid !== null, `game launched into ${what} (pid ${gamePid})${started.ok ? '' : `: ${started.error}`}`)
+      await sleep(Math.max(0, 10000 - (Date.now() - startedAt)))
+      check(alive(gamePid), `the game is still running after 10 s in ${what}`)
+      const problem = readNewError(gameDir, startedAt)
+      check(problem === null && lateErrors.length === 0, `no new errors.txt / traceback.txt for ${what}${problem ? `: ${problem.slice(0, 300)}` : ''}`)
+      await stopByPid(gamePid)
+      await sleep(1500)
+      check(!alive(gamePid), `stopped only pid ${gamePid}; it is gone`)
+      gamePid = null
+    }
 
     // 7. a normal start (no warp) runs the splash screen scene first; give it 6 s
     const splashAt = Date.now()
