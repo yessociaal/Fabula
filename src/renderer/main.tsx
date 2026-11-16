@@ -5,6 +5,7 @@ import './styles/tokens.css'
 import './styles/base.css'
 import './components/components.css'
 import './styles/views.css'
+import './styles/renpy.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

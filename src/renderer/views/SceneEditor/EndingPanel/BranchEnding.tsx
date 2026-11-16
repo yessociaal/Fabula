@@ -26,7 +26,7 @@ export function BranchEnding({ sceneId, ending, problems }: Props) {
       {ending.cases.map((c, i) => {
         const problem = problems.get(`case:${c.id}`)
         return (
-          <div key={c.id} className={`case-row ${problem ? `problem-${problem.severity}` : ''}`} title={problem?.message}>
+          <div key={c.id} data-exit-id={`case:${c.id}`} className={`case-row ${problem ? `problem-${problem.severity}` : ''}`} title={problem?.message}>
             <span className="case-label">{i === 0 ? 'If' : 'Else if'}</span>
             <div className="case-condition">
               <ConditionBuilder value={c.condition} onChange={(condition) => updateCase(sceneId, c.id, { condition })} />
@@ -46,7 +46,7 @@ export function BranchEnding({ sceneId, ending, problems }: Props) {
           </div>
         )
       })}
-      <div className={`case-row otherwise-row ${problems.get('else') ? `problem-${problems.get('else')!.severity}` : ''}`} title={problems.get('else')?.message}>
+      <div data-exit-id="else" className={`case-row otherwise-row ${problems.get('else') ? `problem-${problems.get('else')!.severity}` : ''}`} title={problems.get('else')?.message}>
         <span className="case-label">Otherwise</span>
         <span className="arrow">→</span>
         <div className="option-target">

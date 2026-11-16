@@ -1,4 +1,5 @@
 import type { Asset, Id, Project } from './model'
+import type { Problem } from './validate'
 
 export interface RecentEntry {
   path: string
@@ -16,13 +17,22 @@ export interface Settings {
 export interface RunResult {
   ok: boolean
   error?: string
+  /** Process id of a game that was started (Ren'Py run only). */
+  pid?: number
 }
 
 export interface ExportResult {
   ok: boolean
   error?: string
   sceneLocations?: Record<Id, { file: string; line: number }>
+  /** Set when validation blocked the export (and also carries the warnings after a successful one). */
+  problems?: Problem[]
+  /** Game-relative paths written or deleted by this export. */
+  changed?: string[]
 }
+
+/** Pushed from the main process to the renderer. */
+export const RENPY_ERROR_EVENT = 'renpy:error'
 
 export interface Api {
   getSettings(): Promise<Settings>
@@ -49,6 +59,8 @@ export interface Api {
   renpyLint(projectDir: string): Promise<{ ok: boolean; report: string }>
   renpyDistribute(projectDir: string, destDir: string): Promise<RunResult>
   revealInExplorer(path: string): Promise<void>
+  /** Not in the original plan list: a game that crashed after it had started (main pushes it). Returns an unsubscribe function. */
+  onRenpyError(listener: (error: string) => void): () => void
 }
 
 export type ApiMethod = keyof Api

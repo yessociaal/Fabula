@@ -4,6 +4,8 @@ import { ASSET_FOLDERS, checkAssetExtension, isImageKind } from '@shared/assetTy
 import { createProject, newId } from '@shared/factory'
 import type { Asset, Project } from '@shared/model'
 import { parseProject } from '@shared/schema'
+import { compileProject } from '@shared/compiler'
+import { validateProject } from '@shared/validate'
 
 /**
  * In-memory Api for running the UI in a plain browser (npm run dev:web).
@@ -13,6 +15,7 @@ import { parseProject } from '@shared/schema'
 const SETTINGS_KEY = 'fabula.mock.settings'
 const PROJECTS_KEY = 'fabula.mock.projects'
 const MOCK_PARENT = 'C:\\Fabula Stories'
+const DESKTOP_ONLY = "Ren'Py is only available in the desktop app."
 const MOCK_SDK = "C:\\Users\\you\\Documents\\Ren'py\\renpy-8.4.1-sdk"
 
 interface StoredSettings {
@@ -163,22 +166,29 @@ export const browserMock: Api = {
     return blobUrls.get(`${dir}|${file}`) ?? buildAssetUrl(dir, file)
   },
 
+  // Ren'Py itself only runs in the desktop app. The browser version pretends to create and export so the
+  // flows can be clicked through, and says plainly that running, checking and building are not possible.
   async renpyCreateProject() {
-    return { ok: false, error: 'Not available yet' }
+    return { ok: true }
   },
-  async exportToRenpy() {
-    return { ok: false, error: 'Not available yet' }
+  async exportToRenpy(_dir, project) {
+    const problems = validateProject(project)
+    if (problems.some((p) => p.severity === 'error')) return { ok: false, error: 'There are problems to fix before exporting.', problems }
+    return { ok: true, sceneLocations: compileProject(project).sceneLocations, changed: [], problems }
   },
   async renpyRun() {
-    return { ok: false, error: 'Not available yet' }
+    return { ok: false, error: DESKTOP_ONLY }
   },
   async renpyLint() {
-    return { ok: false, report: 'Not available yet' }
+    return { ok: false, report: DESKTOP_ONLY }
   },
   async renpyDistribute() {
-    return { ok: false, error: 'Not available yet' }
+    return { ok: false, error: DESKTOP_ONLY }
   },
   async revealInExplorer() {
     // nothing to reveal in a browser
+  },
+  onRenpyError() {
+    return () => undefined
   }
 }

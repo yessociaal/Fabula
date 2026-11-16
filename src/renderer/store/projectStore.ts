@@ -45,6 +45,8 @@ export interface ProjectState {
   loadProject(dir: string | null, project: Project): void
   markSaved(): void
   updateMeta(patch: Partial<Project['meta']>): void
+  /** Link (or unlink) the Ren'Py game this story exports into. */
+  setRenpyProjectDir(dir: string | null): void
 
   addScene(position: Position, name?: string): Id
   renameScene(sceneId: Id, name: string): void
@@ -191,6 +193,11 @@ export const useProjectStore = create<ProjectState>()(
         updateMeta(patch) {
           mutate((p) => {
             Object.assign(p.meta, patch)
+          })
+        },
+        setRenpyProjectDir(dir) {
+          mutate((p) => {
+            p.renpyProjectDir = dir
           })
         },
 

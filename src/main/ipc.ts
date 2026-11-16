@@ -1,7 +1,8 @@
 import { BrowserWindow, app, dialog, ipcMain, nativeImage, shell } from 'electron'
+import { statSync } from 'node:fs'
 import { basename } from 'node:path'
 import type { Asset, Project } from '@shared/model'
-import type { Api, Settings } from '@shared/ipc'
+import { RENPY_ERROR_EVENT, type Api, type Settings } from '@shared/ipc'
 import {
   createEditorProject,
   deleteAssetFile,
@@ -11,6 +12,8 @@ import {
   saveProject,
   type ReadImageSize
 } from './projectFiles'
+import { exportProject } from './exporter'
+import { createProject, distribute, lint, runGame } from './renpy'
 import {
   addRecent,
   checkSdkDir,
@@ -21,7 +24,7 @@ import {
   type StoredSettings
 } from './settings'
 
-const NOT_AVAILABLE = 'Not available yet'
+const NO_SDK = "The Ren'Py SDK folder is not set. Choose it in Settings."
 
 const readImageSize: ReadImageSize = (file) => {
   const img = nativeImage.createFromPath(file)
@@ -59,7 +62,7 @@ export function registerIpc(): void {
     save(s)
   }
 
-  const handlers: { [K in keyof Omit<Api, 'assetUrl'>]: (...args: Parameters<Api[K]>) => ReturnType<Api[K]> } = {
+  const handlers: { [K in keyof Omit<Api, 'assetUrl' | 'onRenpyError'>]: (...args: Parameters<Api[K]>) => ReturnType<Api[K]> } = {
     async getSettings(): Promise<Settings> {
       const s = load()
       return { sdkDir: s.sdkDir, sdkVersion: s.sdkDir ? readSdkVersion(s.sdkDir) : null, recent: s.recent }
@@ -117,24 +120,44 @@ export function registerIpc(): void {
     importAssetData: (dir, kind, fileName, data) => importAssetData(dir, kind, basename(fileName), data, readImageSize),
     deleteAssetFile: (dir, file) => deleteAssetFile(dir, file),
 
-    // Phase 9 implements these.
-    async renpyCreateProject() {
-      return { ok: false, error: NOT_AVAILABLE }
+    async renpyCreateProject(targetDir, opts) {
+      const sdk = load().sdkDir
+      if (!sdk) return { ok: false, error: NO_SDK }
+      return createProject(sdk, targetDir, opts)
     },
-    async exportToRenpy() {
-      return { ok: false, error: NOT_AVAILABLE }
+    async exportToRenpy(dir, project) {
+      return exportProject(dir, project)
     },
-    async renpyRun() {
-      return { ok: false, error: NOT_AVAILABLE }
+    async renpyRun(projectDir, warp) {
+      const sdk = load().sdkDir
+      if (!sdk) return { ok: false, error: NO_SDK }
+      return runGame(sdk, projectDir, {
+        warp,
+        onLateError: (error) => {
+          for (const w of BrowserWindow.getAllWindows()) w.webContents.send(RENPY_ERROR_EVENT, error)
+        }
+      })
     },
-    async renpyLint() {
-      return { ok: false, report: NOT_AVAILABLE }
+    async renpyLint(projectDir) {
+      const sdk = load().sdkDir
+      if (!sdk) return { ok: false, report: NO_SDK }
+      return lint(sdk, projectDir)
     },
-    async renpyDistribute() {
-      return { ok: false, error: NOT_AVAILABLE }
+    async renpyDistribute(projectDir, destDir) {
+      const sdk = load().sdkDir
+      if (!sdk) return { ok: false, error: NO_SDK }
+      return distribute(sdk, projectDir, destDir)
     },
 
     async revealInExplorer(path) {
+      try {
+        if (statSync(path).isDirectory()) {
+          await shell.openPath(path)
+          return
+        }
+      } catch {
+        // fall through: reveal whatever is there
+      }
       shell.showItemInFolder(path)
     }
   }

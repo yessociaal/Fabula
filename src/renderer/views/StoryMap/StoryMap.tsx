@@ -6,6 +6,7 @@ import type { Id } from '@shared/model'
 import { Button } from '../../components/Button'
 import { ContextMenu, type MenuItem } from '../../components/ContextMenu'
 import { Modal } from '../../components/Modal'
+import { playInRenpy } from '../../renpyFlows'
 import { useProjectStore } from '../../store/projectStore'
 import { useUiStore } from '../../store/uiStore'
 import { plural } from '../../util'
@@ -53,7 +54,6 @@ function MapCanvas() {
           onSelect: () => store().setSceneChapter(scene.id, id)
         }))
     ]
-    const later = 'Available in a later step'
     return [
       { label: 'Open', onSelect: () => m.openScene(scene.id) },
       { label: 'Rename', onSelect: () => useMapUi.getState().setRenaming(scene.id) },
@@ -77,7 +77,7 @@ function MapCanvas() {
       },
       { separator: true },
       { label: 'Play from here (Quick play)', onSelect: () => useUiStore.getState().startPlaytest(scene.id) },
-      { label: "Play from here in Ren'Py", disabled: true, title: later },
+      { label: "Play from here in Ren'Py", title: 'Export the story and start the real game at this scene', onSelect: () => playInRenpy(scene.id) },
       { separator: true },
       {
         label: doomed.length > 1 ? `Delete ${doomed.length} scenes` : 'Delete',

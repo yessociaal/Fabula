@@ -407,6 +407,17 @@ describe('reference cleanup', () => {
     S().updateMeta({ title: 'Renamed' })
     expect(P().meta.title).toBe('Renamed')
   })
+
+  it("links and unlinks the Ren'Py game, and saves it with the story", () => {
+    expect(P().renpyProjectDir).toBeNull()
+    S().setRenpyProjectDir("C:/games/Test (Ren'Py game)")
+    expect(P().renpyProjectDir).toBe("C:/games/Test (Ren'Py game)")
+    expect(S().dirty).toBe(true)
+    const parsed = parseProject(JSON.parse(JSON.stringify(P())))
+    expect(parsed.ok && parsed.project.renpyProjectDir).toBe("C:/games/Test (Ren'Py game)")
+    S().setRenpyProjectDir(null)
+    expect(P().renpyProjectDir).toBeNull()
+  })
 })
 
 describe('undo / redo', () => {

@@ -10,6 +10,14 @@ export interface UiState {
   selectedNodeIds: Id[]
   problemsOpen: boolean
   playtest: null | { fromSceneId: Id | null }
+  /** The "Create Ren'Py game" modal. `after` runs once the game has been created. */
+  createGame: null | { after: (() => void) | null }
+  /** Text of an error reported by Ren'Py, shown in a modal. */
+  renpyError: string | null
+  /** The lint report modal. */
+  lintReport: null | { ok: boolean; report: string }
+  /** Name of the Ren'Py task that is running, to disable the buttons that would start another. */
+  busy: string | null
 
   setView(view: View): void
   openScene(sceneId: Id): void
@@ -18,6 +26,11 @@ export interface UiState {
   setProblemsOpen(open: boolean): void
   startPlaytest(fromSceneId: Id | null): void
   stopPlaytest(): void
+  openCreateGame(after?: (() => void) | null): void
+  closeCreateGame(): void
+  setRenpyError(error: string | null): void
+  setLintReport(report: null | { ok: boolean; report: string }): void
+  setBusy(busy: string | null): void
   reset(): void
 }
 
@@ -27,7 +40,11 @@ const initial = {
   selectedBlockId: null as Id | null,
   selectedNodeIds: [] as Id[],
   problemsOpen: false,
-  playtest: null as null | { fromSceneId: Id | null }
+  playtest: null as null | { fromSceneId: Id | null },
+  createGame: null as null | { after: (() => void) | null },
+  renpyError: null as string | null,
+  lintReport: null as null | { ok: boolean; report: string },
+  busy: null as string | null
 }
 
 export const useUiStore = create<UiState>()((set) => ({
@@ -39,5 +56,10 @@ export const useUiStore = create<UiState>()((set) => ({
   setProblemsOpen: (problemsOpen) => set({ problemsOpen }),
   startPlaytest: (fromSceneId) => set({ playtest: { fromSceneId } }),
   stopPlaytest: () => set({ playtest: null }),
+  openCreateGame: (after = null) => set({ createGame: { after } }),
+  closeCreateGame: () => set({ createGame: null }),
+  setRenpyError: (renpyError) => set({ renpyError }),
+  setLintReport: (lintReport) => set({ lintReport }),
+  setBusy: (busy) => set({ busy }),
   reset: () => set({ ...initial })
 }))

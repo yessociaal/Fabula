@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   AlertTriangle,
+  ChevronDown,
   Download,
   Home as HomeIcon,
   Map as MapIcon,
@@ -14,10 +15,12 @@ import {
 } from 'lucide-react'
 import { validateProject } from '@shared/validate'
 import { Button } from '../../components/Button'
+import { ContextMenu } from '../../components/ContextMenu'
 import { toast } from '../../components/Toast'
 import { EmptyState } from '../../components/EmptyState'
 import { IconButton } from '../../components/IconButton'
 import { closeProject } from '../../openProject'
+import { buildFlow, exportToRenpyFlow, lintFlow, openGameFolder, playInRenpy } from '../../renpyFlows'
 import { flushAutosave, useSaveStatus } from '../../store/autosave'
 import { redo, undo, useProjectStore } from '../../store/projectStore'
 import { useUiStore, type View } from '../../store/uiStore'
@@ -27,6 +30,9 @@ import Characters from '../Characters/Characters'
 import SceneEditor from '../SceneEditor/SceneEditor'
 import StoryMap from '../StoryMap/StoryMap'
 import Variables from '../Variables/Variables'
+import { ProblemsDrawer } from '../Problems/ProblemsDrawer'
+import Settings from '../Settings/Settings'
+import { RenpyDialogs } from './RenpyDialogs'
 
 const RAIL: { view: View; label: string; icon: ReactNode; empty: string }[] = [
   { view: 'map', label: 'Story Map', icon: <MapIcon size={20} />, empty: 'The story map arrives in a later step.' },
@@ -84,6 +90,9 @@ export default function Shell() {
   const status = useSaveStatus((s) => s.status)
   const canUndo = useStore(useProjectStore.temporal, (t) => t.pastStates.length > 0)
   const canRedo = useStore(useProjectStore.temporal, (t) => t.futureStates.length > 0)
+  const busy = useUiStore((s) => s.busy)
+  const problemsOpen = useUiStore((s) => s.problemsOpen)
+  const [exportMenu, setExportMenu] = useState<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -147,18 +156,34 @@ export default function Shell() {
           variant="ghost"
           className={errors > 0 ? 'problems-error' : count > 0 ? 'problems-warn' : ''}
           icon={<AlertTriangle size={16} />}
-          title={count === 0 ? 'No problems found' : 'Problems in your story'}
+          title={count === 0 ? 'No problems found' : 'Show the problems in your story'}
+          aria-pressed={problemsOpen}
+          onClick={() => useUiStore.getState().setProblemsOpen(!problemsOpen)}
         >
           {count === 1 ? '1 problem' : `${count} problems`}
         </Button>
         <Button icon={<Play size={16} />} onClick={quickPlay} title="Play the story in the editor, from the start scene">
           Quick play
         </Button>
-        <Button icon={<Play size={16} />} disabled title="Available in a later step">
-          Play in Ren'Py
+        <Button
+          icon={<Play size={16} />}
+          disabled={busy !== null}
+          onClick={() => playInRenpy()}
+          title="Export the story, then start the real Ren'Py game"
+        >
+          {busy ?? "Play in Ren'Py"}
         </Button>
-        <Button icon={<Download size={16} />} disabled title="Available in a later step">
-          Export
+        <Button
+          icon={<Download size={16} />}
+          disabled={busy !== null}
+          title="Export, check or build the Ren'Py game"
+          aria-haspopup="menu"
+          onClick={(e) => {
+            const r = e.currentTarget.getBoundingClientRect()
+            setExportMenu({ x: r.right - 220, y: r.bottom + 4 })
+          }}
+        >
+          Export <ChevronDown size={14} />
         </Button>
       </header>
       <div className="shell-body">
@@ -188,13 +213,31 @@ export default function Shell() {
             <StoryMap />
           ) : view === 'scene' ? (
             <SceneEditor />
+          ) : view === 'settings' ? (
+            <Settings />
           ) : (
             <EmptyState icon={current.icon} title={current.label}>
               {current.empty}
             </EmptyState>
           )}
         </section>
+        <ProblemsDrawer />
       </div>
+      {exportMenu && (
+        <ContextMenu
+          x={exportMenu.x}
+          y={exportMenu.y}
+          onClose={() => setExportMenu(null)}
+          items={[
+            { label: "Export to Ren'Py", title: "Write the story into the Ren'Py game folder", onSelect: exportToRenpyFlow },
+            { label: "Check with Ren'Py lint", title: "Export, then let Ren'Py check the game for mistakes", onSelect: lintFlow },
+            { label: 'Build game for sharing…', title: 'Make a Windows version of the game that you can give to other people', onSelect: buildFlow },
+            { separator: true },
+            { label: 'Open game folder', title: "Show the Ren'Py game folder in Explorer", onSelect: openGameFolder }
+          ]}
+        />
+      )}
+      <RenpyDialogs />
     </div>
   )
 }

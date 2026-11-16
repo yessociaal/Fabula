@@ -33,6 +33,7 @@ function OptionRow({ sceneId, option, index, problem }: { sceneId: Id; option: C
   return (
     <div
       ref={setNodeRef}
+      data-exit-id={`opt:${option.id}`}
       className={`option-row ${isDragging ? 'dragging' : ''} ${problem ? `problem-${problem.severity}` : ''}`}
       style={{ transform: transform ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0)` : undefined, transition }}
       title={problem?.message}

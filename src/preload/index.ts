@@ -1,8 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { buildAssetUrl, type Api } from '@shared/ipc'
+import { RENPY_ERROR_EVENT, buildAssetUrl, type Api } from '@shared/ipc'
 
 const call =
-  <K extends keyof Omit<Api, 'assetUrl'>>(name: K) =>
+  <K extends keyof Omit<Api, 'assetUrl' | 'onRenpyError'>>(name: K) =>
   (...args: Parameters<Api[K]>): ReturnType<Api[K]> =>
     ipcRenderer.invoke(`api:${name}`, ...args) as ReturnType<Api[K]>
 
@@ -24,7 +24,14 @@ const api: Api = {
   renpyRun: call('renpyRun'),
   renpyLint: call('renpyLint'),
   renpyDistribute: call('renpyDistribute'),
-  revealInExplorer: call('revealInExplorer')
+  revealInExplorer: call('revealInExplorer'),
+  onRenpyError: (listener) => {
+    const handler = (_event: unknown, message: string): void => listener(message)
+    ipcRenderer.on(RENPY_ERROR_EVENT, handler)
+    return () => {
+      ipcRenderer.removeListener(RENPY_ERROR_EVENT, handler)
+    }
+  }
 }
 
 contextBridge.exposeInMainWorld('api', api)

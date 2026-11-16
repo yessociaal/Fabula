@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import { ArrowLeft, ChevronRight, ClipboardCopy, MoreHorizontal, Play } from 'lucide-react'
+import { ArrowLeft, ChevronRight, MoreHorizontal, Play } from 'lucide-react'
 import type { Scene } from '@shared/model'
-import { compileProject } from '@shared/compiler'
 import { deriveEdges } from '@shared/edges'
 import { Button } from '../../components/Button'
 import { CommitField } from '../../components/CommitField'
@@ -9,6 +8,7 @@ import { ContextMenu, type MenuItem } from '../../components/ContextMenu'
 import { IconButton } from '../../components/IconButton'
 import { Modal } from '../../components/Modal'
 import { toast } from '../../components/Toast'
+import { playInRenpy } from '../../renpyFlows'
 import { useProjectStore } from '../../store/projectStore'
 import { useUiStore } from '../../store/uiStore'
 import { plural } from '../../util'
@@ -20,6 +20,7 @@ export function SceneBar({ scene }: { scene: Scene }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const S = useProjectStore.getState
   const setView = useUiStore((s) => s.setView)
+  const busy = useUiStore((s) => s.busy)
 
   if (!project) return null
 
@@ -61,22 +62,6 @@ export function SceneBar({ scene }: { scene: Scene }) {
     { label: 'Delete', danger: true, onSelect: () => setConfirmDelete(true) }
   ]
 
-  const copyScript = async (): Promise<void> => {
-    const result = compileProject(project)
-    const loc = result.sceneLocations[scene.id]
-    const file = result.files.find((f) => f.path === loc?.file)
-    if (!file) {
-      toast('This scene is not in the compiled output.', 'error')
-      return
-    }
-    try {
-      await navigator.clipboard.writeText(file.content)
-      toast(`Copied ${file.path} (${file.content.split('\n').length} lines)`, 'ok')
-    } catch {
-      toast('Could not copy to the clipboard.', 'error')
-    }
-  }
-
   return (
     <header className="scene-bar">
       <Button variant="ghost" icon={<ArrowLeft size={16} />} onClick={() => setView('map')} title="Back to the Story Map">
@@ -86,13 +71,16 @@ export function SceneBar({ scene }: { scene: Scene }) {
       <CommitField className="scene-name-input" aria-label="Scene name" value={scene.name} required onCommit={(name) => S().renameScene(scene.id, name)} />
       {isStart && <span className="start-badge" title="The game begins with this scene">▶ Start</span>}
       <div className="topbar-spacer" />
-      {import.meta.env.DEV && (
-        <Button icon={<ClipboardCopy size={16} />} onClick={() => void copyScript()} title="Development only: copy the compiled script of this scene's file">
-          Copy script
-        </Button>
-      )}
       <Button icon={<Play size={16} />} onClick={() => useUiStore.getState().startPlaytest(scene.id)} title="Quick play this story starting at this scene">
         Play from here
+      </Button>
+      <Button
+        icon={<Play size={16} />}
+        disabled={busy !== null}
+        onClick={() => playInRenpy(scene.id)}
+        title="Export the story and start the real Ren'Py game at this scene"
+      >
+        Play from here in Ren'Py
       </Button>
       <IconButton
         label="More scene actions"

@@ -1,0 +1,184 @@
+/* Settings view */
+
+.settings-view {
+  height: 100%;
+  overflow: auto;
+  padding: 24px 32px;
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.settings-title {
+  margin: 0;
+  font-size: 22px;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-heading {
+  margin: 0;
+  font-size: 15px;
+}
+
+.settings-input {
+  max-width: 420px;
+}
+
+.settings-value {
+  font-weight: 600;
+}
+
+.settings-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.modal-text {
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Reports (Ren'Py error, lint) */
+
+.report-text {
+  margin: 0;
+  max-height: 48vh;
+  overflow: auto;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.report-ok {
+  margin: 0;
+  color: var(--ok);
+}
+
+/* Problems drawer */
+
+.problems-drawer {
+  width: 340px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  min-height: 0;
+}
+
+.problems-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.problems-header h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.problems-body {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.problems-summary,
+.problems-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.problems-group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+.problems-group-title.error {
+  color: var(--danger);
+}
+
+.problems-group-title.warning {
+  color: var(--warn);
+}
+
+.problems-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.problem-item {
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  color: var(--text);
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.problem-item.error {
+  border-left-color: var(--danger);
+}
+
+.problem-item.warning {
+  border-left-color: var(--warn);
+}
+
+.problem-item:hover {
+  background: var(--line);
+}
+
+@keyframes problem-flash {
+  0% {
+    box-shadow: 0 0 0 3px var(--accent);
+  }
+  100% {
+    box-shadow: 0 0 0 3px transparent;
+  }
+}
+
+.problem-flash {
+  animation: problem-flash 1.8s ease-out;
+}

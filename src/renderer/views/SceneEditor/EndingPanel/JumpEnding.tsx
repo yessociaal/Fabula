@@ -16,7 +16,7 @@ export function JumpEnding({ sceneId, ending, problems }: Props) {
   const problem = problems.get('jump')
   return (
     <div className="ending-body">
-      <div className={`case-row jump-row ${problem ? `problem-${problem.severity}` : ''}`} title={problem?.message}>
+      <div data-exit-id="jump" className={`case-row jump-row ${problem ? `problem-${problem.severity}` : ''}`} title={problem?.message}>
         <span className="case-label">Then go to</span>
         <div className="option-target">
           <SceneSelect

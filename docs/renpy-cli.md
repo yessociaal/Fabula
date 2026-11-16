@@ -9,8 +9,9 @@ SDK: `C:\Users\youbl\Documents\Software\Ren'py\renpy-8.4.1-sdk` (8.4.1.25072401)
 | Create project | `<sdk>\launcher generate_gui <targetDir> --start --width 1280 --height 720 --accent #7c9cff --template <sdk>\gui` | Exit 0. Creates `game/` with `gui.rpy`, `options.rpy`, `screens.rpy`, `script.rpy`, `audio/`, `gui/`, `images/`, `libs/`. |
 | Lint | `<projectDir> lint <reportFile>` | Exit 0. Report written to `<reportFile>` (stdout is not used). |
 | Play from a line | `<projectDir> --warp script.rpy:<line>` | Window opens, no new `errors.txt` / `traceback.txt` after 12 s. |
-| Distribute | `<sdk>\launcher distribute <projectDir> --destination <dir> --package win` | Not yet run. Source: `launcher/game/distribute.rpy:1761`. Verify in Phase 9. |
+| Distribute | `<sdk>\launcher distribute <projectDir> --destination <dir> --package win` | Verified in Phase 9, exactly as written: exit 0 after about 14-18 s, writes `<dir>/<name>-1.0-win.zip` (about 30 MB for an empty game; the name comes from the project folder). The destination folder is created if missing. |
 
 Notes:
 - Lint exits 0 even when it reports problems; read the report file to decide success.
+- Stopping a game we started: `taskkill /PID <pid> /T /F` (by the pid we got from spawn, never by image name).
 - When stopping a game we started, stop only that process id.
