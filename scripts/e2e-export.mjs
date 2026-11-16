@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { bundle, makePng, makeWav, renpyExe, root, sdk } from './lib.mjs'
+import { bundle, placeholderFor, renpyExe, root, sdk } from './lib.mjs'
 
 /**
  * End-to-end check with the real Ren'Py SDK and the real exporter, no mocks:
@@ -70,7 +70,7 @@ async function main() {
     for (const asset of Object.values(project.assets)) {
       const file = join(editor, 'assets', ...asset.file.split('/'))
       mkdirSync(dirname(file), { recursive: true })
-      writeFileSync(file, asset.file.endsWith('.png') ? makePng() : makeWav())
+      writeFileSync(file, placeholderFor(asset.file))
     }
 
     // 1. create the Ren'Py project
@@ -98,6 +98,26 @@ async function main() {
       check(!/^\s*#/m.test(text) && !/fabula|generated/i.test(text), `${f} has no comment and no tool name`)
     }
 
+    const script = readFileSync(join(gameDir, 'game', 'script.rpy'), 'utf8')
+    for (const [what, needle] of [
+      ['a voice line', 'voice "audio/voice/anna_01.wav"'],
+      ['the ambient channel', 'renpy.music.register_channel("ambient", "sfx", loop=True)'],
+      ['an ambient track', 'play ambient "audio/ambient/rain.wav"'],
+      ['an Ask the player block', 'renpy.input("What is your name?"'],
+      ['an NVL character and narrator', 'kind=nvl'],
+      ['NVL clear', 'nvl clear'],
+      ['a custom placement', '        xalign 0.25'],
+      ['a movie', 'renpy.movie_cutscene("movies/intro.webm")'],
+      ['a splash screen', 'label splashscreen:'],
+      ['a persistent variable', 'default persistent.seen_ending = False']
+    ]) {
+      check(script.includes(needle), `the exported script contains ${what}`)
+    }
+    check(
+      existsSync(join(gameDir, 'game', 'images', 'characters', 'side nova.png')) && existsSync(join(gameDir, 'game', 'movies', 'intro.webm')),
+      'the side image and the movie file were copied into the game'
+    )
+
     // 3. lint
     t = Date.now()
     const linted = await lint(sdk, gameDir)
@@ -124,7 +144,7 @@ async function main() {
     check(built.ok === true && zips.length > 0, `distribute produced a package: ${zips.map((z) => `${z} ${(statSync(join(dist, z)).size / 1048576).toFixed(1)} MB`).join(', ') || 'none'} (${((Date.now() - t) / 1000).toFixed(1)} s)`)
 
     // 6. run the game warped to a scene, watch for ~10 s, stop only that process
-    const scene = second.sceneLocations.s_left
+    const scene = second.sceneLocations.s_extras
     const warp = { file: scene.file, line: scene.line + 1 }
     console.log(`      launching with --warp ${warp.file}:${warp.line}`)
     const launchedAt = Date.now()
@@ -136,6 +156,20 @@ async function main() {
     check(alive(gamePid), 'the game is still running after 10 s')
     const err = readNewError(gameDir, launchedAt)
     check(err === null && late.length === 0, `no new errors.txt / traceback.txt${err ? `: ${err.slice(0, 300)}` : ''}`)
+    await stopByPid(gamePid)
+    await sleep(1500)
+    check(!alive(gamePid), `stopped only pid ${gamePid}; it is gone`)
+
+    // 7. a normal start (no warp) runs the splash screen scene first; give it 6 s
+    const splashAt = Date.now()
+    const splashLate = []
+    const splash = await runGame(sdk, gameDir, { startupWaitMs: 3000, onLateError: (e) => splashLate.push(e) })
+    gamePid = splash.pid ?? null
+    check(splash.ok === true && gamePid !== null, `game launched without --warp, so the splash screen runs first (pid ${gamePid})${splash.ok ? '' : `: ${splash.error}`}`)
+    await sleep(Math.max(0, 6000 - (Date.now() - splashAt)))
+    check(alive(gamePid), 'the game is still running after 6 s on the splash screen')
+    const splashErr = readNewError(gameDir, splashAt)
+    check(splashErr === null && splashLate.length === 0, `no new errors.txt / traceback.txt after the splash screen${splashErr ? `: ${splashErr.slice(0, 300)}` : ''}`)
   } finally {
     if (gamePid !== null) {
       await stopByPid(gamePid)

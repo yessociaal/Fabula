@@ -1,10 +1,14 @@
 import type { ReactNode } from 'react'
 import {
   Bell,
+  Eraser,
+  Film,
   Hash,
+  Keyboard,
   Image as ImageIcon,
   MessageSquare,
   Music,
+  PanelBottom,
   Pause,
   ScrollText,
   Sparkles,
@@ -12,30 +16,9 @@ import {
   UserX,
   VolumeX
 } from 'lucide-react'
-import type { Block, CoreBlockType } from '@shared/model'
+import type { Block } from '@shared/model'
 
-export interface PaletteEntry {
-  /** Unique key. Narration and Dialogue share the block type `say`. */
-  key: string
-  type: CoreBlockType
-  label: string
-  narration?: boolean
-}
-
-/** The ten core entries, in the order of the plan's figure. */
-export const PALETTE: PaletteEntry[] = [
-  { key: 'dialogue', type: 'say', label: 'Dialogue' },
-  { key: 'narration', type: 'say', label: 'Narration', narration: true },
-  { key: 'background', type: 'background', label: 'Background' },
-  { key: 'show', type: 'show', label: 'Show' },
-  { key: 'hide', type: 'hide', label: 'Hide' },
-  { key: 'playMusic', type: 'playMusic', label: 'Music' },
-  { key: 'stopMusic', type: 'stopMusic', label: 'Stop music' },
-  { key: 'playSound', type: 'playSound', label: 'Sound' },
-  { key: 'setVariable', type: 'setVariable', label: 'Variable' },
-  { key: 'pause', type: 'pause', label: 'Pause' },
-  { key: 'transition', type: 'transition', label: 'Transition' }
-]
+export { ALL_PALETTE, MORE_PALETTE, PALETTE, type PaletteEntry } from './paletteEntries'
 
 export function blockIcon(block: Pick<Block, 'type'> & { characterId?: string | null }, size = 16): ReactNode {
   return iconFor(block.type, block.type === 'say' && block.characterId === null, size)
@@ -63,6 +46,14 @@ export function iconFor(type: string, narration: boolean, size = 16): ReactNode 
       return <Pause size={size} />
     case 'transition':
       return <Sparkles size={size} />
+    case 'ask':
+      return <Keyboard size={size} />
+    case 'movie':
+      return <Film size={size} />
+    case 'window':
+      return <PanelBottom size={size} />
+    case 'clearPage':
+      return <Eraser size={size} />
     default:
       return <Sparkles size={size} />
   }
@@ -80,9 +71,9 @@ export function blockKindLabel(block: Block): string {
     case 'hide':
       return 'Hide character'
     case 'playMusic':
-      return 'Play music'
+      return block.channel === 'ambient' ? 'Play ambient' : 'Play music'
     case 'stopMusic':
-      return 'Stop music'
+      return block.channel === 'ambient' ? 'Stop ambient' : 'Stop music'
     case 'playSound':
       return 'Play sound'
     case 'setVariable':
@@ -91,6 +82,14 @@ export function blockKindLabel(block: Block): string {
       return 'Pause'
     case 'transition':
       return 'Transition'
+    case 'ask':
+      return 'Ask the player'
+    case 'movie':
+      return 'Movie'
+    case 'window':
+      return 'Text box show/hide'
+    case 'clearPage':
+      return 'Clear page'
     default:
       return 'Block'
   }

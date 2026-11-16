@@ -9,7 +9,16 @@ export function pythonString(s: string): string {
   return `"${escapeBasic(s)}"`
 }
 
-const KEPT_TAGS = ['{b}', '{/b}', '{i}', '{/i}', '{u}', '{/u}']
+const FIXED_TAGS = ['{b}', '{/b}', '{i}', '{/i}', '{u}', '{/u}', '{/color}', '{/size}', '{w}', '{p}', '{/cps}']
+const ARG_TAG = /^\{(color=#[0-9a-fA-F]{6}|size=[0-9]{1,3}|cps=[0-9]{1,3})\}/
+
+/** The text tag that starts at `s[i]` if it is one of the allowed ones with valid arguments, else null. */
+function keptTag(s: string, i: number): string | null {
+  const fixed = FIXED_TAGS.find((t) => s.startsWith(t, i))
+  if (fixed) return fixed
+  const m = ARG_TAG.exec(s.slice(i, i + 24))
+  return m ? m[0] : null
+}
 
 /** Escapes text for a Ren'Py say, menu or prompt string (without the surrounding quotes). */
 export function escapeSayText(text: string, knownVariableNames: Iterable<string>): string {
@@ -29,7 +38,7 @@ export function escapeSayText(text: string, knownVariableNames: Iterable<string>
         i += 1
       }
     } else if (ch === '{') {
-      const tag = KEPT_TAGS.find((t) => s.startsWith(t, i))
+      const tag = keptTag(s, i)
       if (tag) {
         out += tag
         i += tag.length
@@ -63,4 +72,9 @@ export function pythonValue(v: Scalar): string {
 export function pythonDuration(n: number): string {
   if (!Number.isFinite(n)) return '0.0'
   return Number.isInteger(n) ? n.toFixed(1) : String(n)
+}
+
+/** A float that always shows a decimal point: 1 -> "1.0", 0.25 -> "0.25". ATL reads a bare 1 as one pixel, so alignments use this. */
+export function pythonFloat(n: number): string {
+  return pythonDuration(n)
 }

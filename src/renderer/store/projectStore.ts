@@ -9,7 +9,7 @@ import type {
   Character,
   ChoiceOption,
   Condition,
-  CoreBlockType,
+  CreatableBlockType,
   CoreEndingType,
   Effect,
   Ending,
@@ -57,8 +57,12 @@ export interface ProjectState {
   addScenes(scenes: Scene[]): Id[]
   setStartScene(sceneId: Id | null): void
   setSceneChapter(sceneId: Id, chapterId: Id | null): void
+  /** Normal scene, or the splash screen shown before the main menu. */
+  setSceneRole(sceneId: Id, role: Scene['role']): void
+  /** Lock the exported label to exactly this text, or pass null to go back to the automatic one. The text is not checked here: see `labelLockProblem`. */
+  setLabelLock(sceneId: Id, label: string | null): void
 
-  addBlock(sceneId: Id, type: CoreBlockType, index?: number): Id | null
+  addBlock(sceneId: Id, type: CreatableBlockType, index?: number): Id | null
   updateBlock<T extends Block = Block>(sceneId: Id, blockId: Id, patch: BlockPatch<T>): void
   moveBlock(sceneId: Id, from: number, to: number): void
   deleteBlock(sceneId: Id, blockId: Id): void
@@ -264,6 +268,17 @@ export const useProjectStore = create<ProjectState>()(
         setSceneChapter(sceneId, chapterId) {
           mutateScene(sceneId, (s) => {
             s.chapterId = chapterId
+          })
+        },
+
+        setSceneRole(sceneId, role) {
+          mutateScene(sceneId, (s) => {
+            s.role = role
+          })
+        },
+        setLabelLock(sceneId, label) {
+          mutateScene(sceneId, (s) => {
+            s.labelLock = label === null || label === '' ? null : label
           })
         },
 

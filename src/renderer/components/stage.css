@@ -202,3 +202,86 @@
     opacity: 1;
   }
 }
+
+/* Custom placement: the sprite is aligned like Ren'Py's xalign / yalign (position and anchor move together). */
+.stage-sprite-custom {
+  bottom: auto;
+  left: auto;
+  right: auto;
+  transform-origin: center;
+}
+
+.stage-sprite-draggable {
+  cursor: grab;
+  outline: 1px dashed rgba(124, 156, 255, 0.9);
+  touch-action: none;
+}
+
+.stage-sprite-draggable.dragging {
+  cursor: grabbing;
+}
+
+.stage-ambient {
+  position: absolute;
+  top: 1.5cqw;
+  left: 1.5cqw;
+  max-width: 40%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: max(10px, 1.5cqw);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.stage-movie,
+.stage-ask {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1.5cqw;
+  background: rgba(10, 11, 16, 0.92);
+  font-size: max(11px, 2.2cqw);
+  text-align: center;
+  padding: 0 10%;
+}
+
+.stage-ask-row {
+  display: flex;
+  gap: 1cqw;
+  width: min(80%, 60cqw);
+}
+
+.stage-ask-row input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  padding: 0.6cqw 1.2cqw;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+}
+
+.stage-ask-row button {
+  font: inherit;
+  padding: 0.6cqw 1.6cqw;
+  color: #fff;
+  background: rgba(124, 156, 255, 0.5);
+  border: 1px solid #fff;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.stage-movie-name {
+  font-weight: 700;
+}
+
+.stage-movie-hint {
+  opacity: 0.7;
+  font-size: 0.8em;
+}

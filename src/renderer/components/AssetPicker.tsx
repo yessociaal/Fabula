@@ -8,6 +8,8 @@ import { useProjectStore } from '../store/projectStore'
 import { AssetThumb } from './AssetThumb'
 import { useFileInput } from './DropZone'
 
+const PLAYABLE_KINDS: ReadonlySet<AssetKind> = new Set(['music', 'sound', 'ambient', 'voice'])
+
 interface AssetPickerProps {
   kind: AssetKind
   value: Id | null
@@ -81,6 +83,7 @@ export function AssetPicker({ kind, value, onChange, noneLabel = 'None' }: Asset
         const isPlaying = playing === url
         return (
           <div key={a.id} className={`picker-row ${value === a.id ? 'selected' : ''}`}>
+            {PLAYABLE_KINDS.has(kind) && (
             <button
               type="button"
               className="icon-btn"
@@ -90,6 +93,7 @@ export function AssetPicker({ kind, value, onChange, noneLabel = 'None' }: Asset
             >
               {isPlaying ? <Pause size={16} /> : <Play size={16} />}
             </button>
+            )}
             <button
               type="button"
               role="option"

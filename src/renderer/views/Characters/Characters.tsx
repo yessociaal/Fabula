@@ -4,11 +4,13 @@ import { ALLOWED_EXTENSIONS } from '@shared/assetTypes'
 import { findUsage } from '@shared/usage'
 import type { Id } from '@shared/model'
 import { importFiles } from '../../assetImport'
+import { useFileInput } from '../../components/DropZone'
 import { AssetThumb } from '../../components/AssetThumb'
 import { Button } from '../../components/Button'
 import { ColorField } from '../../components/ColorField'
 import { CommitField } from '../../components/CommitField'
 import { DropZone } from '../../components/DropZone'
+import { Select } from '../../components/Select'
 import { EmptyState } from '../../components/EmptyState'
 import { IconButton } from '../../components/IconButton'
 import { InUseModal } from '../../components/InUseModal'
@@ -36,6 +38,11 @@ export default function Characters() {
   }
 
   const requestDelete = (id: Id): void => setDeleting(id)
+  const addSide = async (files: File[]): Promise<void> => {
+    if (!current) return
+    const assets = await importFiles(files.slice(0, 1), 'sprite')
+    if (assets[0]) store().updateCharacter(current.id, { sideAssetId: assets[0].id })
+  }
   const doDelete = (id: Id): void => {
     store().deleteCharacter(id)
     setDeleting(null)
@@ -92,6 +99,23 @@ export default function Characters() {
               Delete character
             </Button>
           </div>
+
+          <div className="pane-row">
+            <Select<'adv' | 'nvl'>
+              label="Dialogue style"
+              value={current.mode}
+              options={[
+                { value: 'adv', label: 'Text box at the bottom (ADV)' },
+                { value: 'nvl', label: 'Full-page text (NVL)' }
+              ]}
+              onChange={(mode) => store().updateCharacter(current.id, { mode })}
+            />
+          </div>
+          <SideImage
+            characterId={current.id}
+            assetId={current.sideAssetId}
+            onUpload={(files) => void addSide(files)}
+          />
 
           <h2 className="pane-heading">Expressions</h2>
           <div className="tile-grid">
@@ -160,6 +184,29 @@ export default function Characters() {
             <p className="modal-message">This character is not used in any scene.</p>
           </Modal>
         ))}
+    </div>
+  )
+}
+
+/** The small picture shown beside the text box while this character speaks (Ren'Py "side image"). */
+function SideImage({ characterId, assetId, onUpload }: { characterId: Id; assetId: Id | null; onUpload: (files: File[]) => void }) {
+  const project = useProjectStore((s) => s.project)
+  const store = useProjectStore.getState
+  const { input, open } = useFileInput(ALLOWED_EXTENSIONS.sprite.join(','), onUpload)
+  const asset = assetId ? project?.assets[assetId] : null
+  return (
+    <div className="side-image">
+      <span className="field-label">Side image</span>
+      <div className="pane-row">
+        <div className="tile side-tile">
+          <AssetThumb asset={asset} missingLabel="No side image" checker />
+        </div>
+        <Button onClick={open} title="Upload the small picture that shows beside the text box while this character speaks">
+          {asset ? 'Replace…' : 'Upload…'}
+        </Button>
+        {asset && <Button onClick={() => store().updateCharacter(characterId, { sideAssetId: null })}>Remove</Button>}
+        {input}
+      </div>
     </div>
   )
 }

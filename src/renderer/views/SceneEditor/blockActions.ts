@@ -3,7 +3,7 @@ import type { Id } from '@shared/model'
 import { useProjectStore } from '../../store/projectStore'
 import { useUiStore } from '../../store/uiStore'
 import { batch } from '../../store/batch'
-import { PALETTE, type PaletteEntry } from './blockMeta'
+import { ALL_PALETTE, type PaletteEntry } from './blockMeta'
 import { appendIndex, defaultSpeaker, neighbourId, selectionAfterDelete } from './editorHelpers'
 
 /** A request to put the text cursor into a dialogue row (made after Enter creates a new line below). */
@@ -33,7 +33,7 @@ export function addEntryAt(sceneId: Id, entry: PaletteEntry, index: number): Id 
 }
 
 export function addEntryByKey(sceneId: Id, key: string, index: number): Id | null {
-  const entry = PALETTE.find((p) => p.key === key)
+  const entry = ALL_PALETTE.find((p) => p.key === key)
   return entry ? addEntryAt(sceneId, entry, index) : null
 }
 

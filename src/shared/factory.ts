@@ -9,7 +9,7 @@ import type {
   ChoiceOption,
   Clause,
   Condition,
-  CoreBlockType,
+  CreatableBlockType,
   Effect,
   Expression,
   Id,
@@ -58,7 +58,7 @@ export function createScene(position: { x: number; y: number }, name = 'New scen
   }
 }
 
-export function createBlock(type: CoreBlockType): Block {
+export function createBlock(type: CreatableBlockType): Block {
   const id = newId()
   switch (type) {
     case 'say':
@@ -90,6 +90,14 @@ export function createBlock(type: CoreBlockType): Block {
       return { id, type, seconds: null }
     case 'transition':
       return { id, type, transition: 'dissolve' }
+    case 'ask':
+      return { id, type, variableId: null, prompt: '', defaultText: '', maxLength: 20 }
+    case 'movie':
+      return { id, type, assetId: null }
+    case 'window':
+      return { id, type, action: 'hide' }
+    case 'clearPage':
+      return { id, type }
   }
 }
 

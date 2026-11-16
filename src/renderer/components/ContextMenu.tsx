@@ -24,8 +24,16 @@ interface ContextMenuProps {
 
 function MenuList({ items, onClose, className }: { items: MenuItem[]; onClose: () => void; className?: string }) {
   const [open, setOpen] = useState<number | null>(null)
+  const [flip, setFlip] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  // A submenu that would run off the right edge of the window opens to the left instead.
+  useLayoutEffect(() => {
+    if (className?.includes('context-sub') && ref.current) {
+      setFlip(ref.current.getBoundingClientRect().right > window.innerWidth - 4)
+    }
+  }, [className])
   return (
-    <div className={`context-menu ${className ?? ''}`} role="menu" onContextMenu={(e) => e.preventDefault()}>
+    <div ref={ref} className={`context-menu ${className ?? ''} ${flip ? 'context-sub-left' : ''}`} role="menu" onContextMenu={(e) => e.preventDefault()}>
       {items.map((item, i) => {
         if (item.separator) return <div key={i} className="context-sep" role="separator" />
         const hasSub = !!item.submenu

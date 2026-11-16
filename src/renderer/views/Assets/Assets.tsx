@@ -16,15 +16,22 @@ import { Modal } from '../../components/Modal'
 import { Tabs } from '../../components/Tabs'
 import { goToScene } from '../../navigation'
 import { useProjectStore } from '../../store/projectStore'
-import { formatDuration, plural } from '../../util'
+import { formatBytes, formatDuration, plural } from '../../util'
 
-type TabId = Extract<AssetKind, 'background' | 'sprite' | 'music' | 'sound'>
+type TabId = AssetKind
 const TABS: { id: TabId; label: string }[] = [
   { id: 'background', label: 'Backgrounds' },
   { id: 'sprite', label: 'Sprites' },
   { id: 'music', label: 'Music' },
-  { id: 'sound', label: 'Sounds' }
+  { id: 'sound', label: 'Sounds' },
+  { id: 'ambient', label: 'Ambient' },
+  { id: 'voice', label: 'Voice' },
+  { id: 'movie', label: 'Movies' },
+  { id: 'ui', label: 'UI' },
+  { id: 'font', label: 'Fonts' }
 ]
+
+const AUDIO_TABS: ReadonlySet<AssetKind> = new Set(['music', 'sound', 'ambient', 'voice'])
 
 interface ItemActions {
   onReplace: (file: File) => void
@@ -176,6 +183,23 @@ function AudioRow({ asset, dir, used, actions }: { asset: Asset; dir: string; us
   )
 }
 
+/** Movies and fonts: a name, a size and where it is used. Nothing to play here. */
+function FileRow({ asset, used, actions }: { asset: Asset; used: number; actions: ItemActions }) {
+  const [editing, setEditing] = useState(false)
+  return (
+    <div className="audio-row file-row">
+      <NameCell asset={asset} editing={editing} setEditing={setEditing} />
+      {asset.kind === 'movie' && (
+        <span className="tile-meta" title="File size">
+          {formatBytes(asset.bytes)}
+        </span>
+      )}
+      <span className="tile-meta">used in {plural(used, 'place')}</span>
+      <ItemMenu asset={asset} actions={{ ...actions, onRenameStart: () => setEditing(true) }} />
+    </div>
+  )
+}
+
 export default function Assets() {
   const project = useProjectStore((s) => s.project)
   const dir = useProjectStore((s) => s.dir)
@@ -248,9 +272,13 @@ export default function Assets() {
           </div>
         ) : (
           <div className="audio-list">
-            {items.map((a) => (
-              <AudioRow key={a.id} asset={a} dir={dir} used={countUsage(usage.assets[a.id])} actions={actionsFor(a)} />
-            ))}
+            {items.map((a) =>
+              AUDIO_TABS.has(a.kind) ? (
+                <AudioRow key={a.id} asset={a} dir={dir} used={countUsage(usage.assets[a.id])} actions={actionsFor(a)} />
+              ) : (
+                <FileRow key={a.id} asset={a} used={countUsage(usage.assets[a.id])} actions={actionsFor(a)} />
+              )
+            )}
           </div>
         )}
       </div>

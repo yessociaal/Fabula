@@ -430,3 +430,73 @@
 .new-item-type {
   margin-top: 12px;
 }
+
+.palette-group {
+  margin-top: 14px;
+}
+
+.tool-btn.tool-btn-text {
+  width: auto;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.tool-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.text-tools-wrap {
+  flex-wrap: wrap;
+}
+
+.tool-panel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.tool-panel .input {
+  width: 90px;
+}
+
+.tool-panel input[type='color'] {
+  width: 40px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: transparent;
+}
+
+.slider-value {
+  float: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.custom-placement {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.custom-placement input[type='range'] {
+  width: 100%;
+}
+
+.lock-status {
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
+.lock-status.ok {
+  color: var(--ok);
+}
+
+.lock-status.bad {
+  color: var(--danger);
+}

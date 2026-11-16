@@ -1,9 +1,16 @@
 import type { Block, Id, Project, StagePosition } from './model'
+import type { CustomPlacement } from './placement'
+
+export type { CustomPlacement }
 
 export interface StageSprite {
   characterId: Id
   expressionId: Id | null
   position: StagePosition
+  /** Only present when the show block uses a custom placement. */
+  placement?: CustomPlacement
+  /** Only present when the layer order is not 0. */
+  zorder?: number
 }
 
 export interface StageState {
@@ -22,6 +29,8 @@ export function applyBlockToStage(state: StageState, b: Block): void {
     case 'show': {
       if (b.characterId === null) break
       const sprite: StageSprite = { characterId: b.characterId, expressionId: b.expressionId, position: b.position }
+      if (b.placement.mode === 'custom') sprite.placement = { ...b.placement }
+      if (b.zorder !== 0) sprite.zorder = b.zorder
       const at = state.sprites.findIndex((s) => s.characterId === b.characterId)
       if (at >= 0) state.sprites[at] = sprite
       else state.sprites.push(sprite)

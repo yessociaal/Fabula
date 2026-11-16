@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { bundle, makePng, makeWav, renpyExe, root, run, sdk } from './lib.mjs'
+import { bundle, placeholderFor, renpyExe, root, run, sdk } from './lib.mjs'
 
 function fail(message) {
   console.error(`FAIL: ${message}`)
@@ -48,12 +48,10 @@ async function main() {
       mkdirSync(dirname(target), { recursive: true })
       writeFileSync(target, file.content, 'utf8')
     }
-    const png = makePng()
-    const wav = makeWav()
     for (const copy of result.assetCopies) {
       const target = join(gameDir, ...copy.to.split('/'))
       mkdirSync(dirname(target), { recursive: true })
-      writeFileSync(target, copy.to.endsWith('.png') ? png : wav)
+      writeFileSync(target, placeholderFor(copy.to))
     }
 
     const report = join(workDir, 'lint-report.txt')

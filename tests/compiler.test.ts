@@ -340,7 +340,7 @@ describe('defensive rules and extended features', () => {
     const extra = [
       { id: 'x1', type: 'code', code: 'x = 1' },
       { id: 'x2', type: 'visit', sceneId: null },
-      { id: 'x3', type: 'clearPage' }
+      { id: 'x3', type: 'screen', action: 'show', screenId: null }
     ] as unknown as Block[]
     expect(startBody(k, extra)).toEqual(['    return'])
     k.start.ending = { type: 'code', code: '', exits: [] }
@@ -474,14 +474,19 @@ describe('golden files and global rules', () => {
 
   it('asset copies for the fixture', () => {
     expect(result.assetCopies.map((c) => c.to)).toEqual([
+      'audio/ambient/rain.wav',
       'audio/music/morning.wav',
       'audio/music/night_theme.wav',
       'audio/sfx/door.wav',
+      'audio/voice/anna_01.wav',
       'images/bg/bg forest.png',
       'images/bg/bg gate.png',
       'images/characters/anna happy.png',
       'images/characters/anna sad.png',
-      'images/characters/left_char smile.png'
+      'images/characters/left_char smile.png',
+      'images/characters/nova calm.png',
+      'images/characters/side nova.png',
+      'movies/intro.webm'
     ])
   })
 
@@ -493,7 +498,10 @@ describe('golden files and global rules', () => {
       s_gate: 'gate',
       s_gate2: 'gate_2',
       s_door: 'locked_door',
-      s_end: 'the_end'
+      s_end: 'the_end',
+      s_extras: 'extras',
+      s_cutscene: 'cutscene_intro',
+      s_splash: 'splashscreen'
     }
     for (const [id, label] of Object.entries(labels)) {
       const loc = result.sceneLocations[id]

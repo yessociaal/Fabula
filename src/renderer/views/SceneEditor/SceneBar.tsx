@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { ArrowLeft, ChevronRight, MoreHorizontal, Play } from 'lucide-react'
 import type { Scene } from '@shared/model'
+import { labelLockProblem } from '@shared/naming'
 import { deriveEdges } from '@shared/edges'
 import { Button } from '../../components/Button'
 import { CommitField } from '../../components/CommitField'
+import { TextField } from '../../components/TextField'
 import { ContextMenu, type MenuItem } from '../../components/ContextMenu'
 import { IconButton } from '../../components/IconButton'
 import { Modal } from '../../components/Modal'
@@ -18,6 +20,7 @@ export function SceneBar({ scene }: { scene: Scene }) {
   const project = useProjectStore((s) => s.project)
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [locking, setLocking] = useState(false)
   const S = useProjectStore.getState
   const setView = useUiStore((s) => s.setView)
   const busy = useUiStore((s) => s.busy)
@@ -58,6 +61,26 @@ export function SceneBar({ scene }: { scene: Scene }) {
           }))
       ]
     },
+    {
+      label: 'Role',
+      submenu: [
+        { label: `${scene.role === 'normal' ? '✓ ' : ''}Normal`, onSelect: () => S().setSceneRole(scene.id, 'normal') },
+        {
+          label: `${scene.role === 'splashscreen' ? '✓ ' : ''}Splash screen`,
+          title: 'Shown once when the game starts, before the main menu. It must finish with "End of story".',
+          onSelect: () => {
+            S().setSceneRole(scene.id, 'splashscreen')
+            if (scene.ending.type !== 'end') toast('A splash screen must finish with "End of story". Change its ending.')
+          }
+        }
+      ]
+    },
+    {
+      label: scene.labelLock === null ? 'Lock label…' : `Lock label… (${scene.labelLock})`,
+      title: 'Make the exported label of this scene a fixed name, for example one your own code jumps to',
+      disabled: isStart,
+      onSelect: () => setLocking(true)
+    },
     { separator: true },
     { label: 'Delete', danger: true, onSelect: () => setConfirmDelete(true) }
   ]
@@ -92,6 +115,7 @@ export function SceneBar({ scene }: { scene: Scene }) {
         <MoreHorizontal size={18} />
       </IconButton>
       {menu && <ContextMenu x={menu.x} y={menu.y} items={items} onClose={() => setMenu(null)} />}
+      {locking && <LockLabelModal scene={scene} onClose={() => setLocking(false)} />}
       {confirmDelete && (
         <Modal
           title="Delete this scene?"
@@ -120,5 +144,44 @@ export function SceneBar({ scene }: { scene: Scene }) {
         </Modal>
       )}
     </header>
+  )
+}
+
+/** Type the label to lock; the check runs as you type. Saving an empty text goes back to the automatic label. */
+function LockLabelModal({ scene, onClose }: { scene: Scene; onClose: () => void }) {
+  const project = useProjectStore((s) => s.project)
+  const [text, setText] = useState(scene.labelLock ?? '')
+  if (!project) return null
+  const trimmed = text.trim()
+  const problem = trimmed === '' ? null : labelLockProblem(project, scene.id, trimmed)
+  const save = (): void => {
+    if (problem !== null) return
+    useProjectStore.getState().setLabelLock(scene.id, trimmed === '' ? null : trimmed)
+    onClose()
+  }
+  return (
+    <Modal
+      title="Lock label"
+      onClose={onClose}
+      footer={
+        <>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button variant="primary" disabled={problem !== null} onClick={save}>
+            {trimmed === '' ? 'Use the automatic label' : 'Lock label'}
+          </Button>
+        </>
+      }
+    >
+      <div onKeyDown={(e) => e.key === 'Enter' && save()}>
+        <TextField label="Label" value={text} onChange={setText} autoFocus aria-label="Locked label" />
+        <p className={`lock-status ${problem === null ? 'ok' : 'bad'}`} role="status">
+          {trimmed === ''
+            ? 'Leave it empty to let Fabula pick the label from the scene name.'
+            : problem === null
+              ? `OK: this scene will always be exported as "label ${trimmed}".`
+              : problem}
+        </p>
+      </div>
+    </Modal>
   )
 }

@@ -407,3 +407,8 @@ button:disabled:hover {
   margin: 4px 2px;
   background: var(--line);
 }
+
+.context-sub.context-sub-left {
+  left: auto;
+  right: 100%;
+}

@@ -1,15 +1,17 @@
 import type { Block, Condition, Effect, Id, Project, Transition } from '../model'
 import { conditionToPython } from '../conditions'
 import type { NameTable } from '../naming'
-import { audioPath, backgroundPath, lookupAsset, spritePath } from './assets'
+import { audioPath, backgroundPath, lookupAsset, moviePath, spritePath } from './assets'
 import type { AssetCopy } from './assets'
-import { escapeSayText, pythonDuration, pythonString, pythonValue } from './text'
+import { escapeSayText, pythonDuration, pythonFloat, pythonNumber, pythonString, pythonValue } from './text'
 
 export interface CompileContext {
   project: Project
   names: NameTable
   knownVariables: ReadonlySet<string>
   copies: Map<string, AssetCopy>
+  /** Set while emitting when any block uses the ambient channel, so that the channel gets registered once. */
+  usesAmbient: boolean
 }
 
 export function sayText(text: string, ctx: CompileContext): string {
@@ -18,7 +20,7 @@ export function sayText(text: string, ctx: CompileContext): string {
 
 export function variableName(ctx: CompileContext, id: Id | null): string | null {
   if (id === null) return null
-  return ctx.names.variables[id] ?? null
+  return ctx.names.variableRefs[id] ?? null
 }
 
 export function conditionPython(condition: Condition, ctx: CompileContext): string {
@@ -26,7 +28,7 @@ export function conditionPython(condition: Condition, ctx: CompileContext): stri
     join: condition.join,
     clauses: condition.clauses.filter((c) => variableName(ctx, c.variableId) !== null)
   }
-  return conditionToPython(usable, (id) => ctx.names.variables[id])
+  return conditionToPython(usable, (id) => ctx.names.variableRefs[id])
 }
 
 function withTransition(line: string, transition: Transition): string {
@@ -65,7 +67,12 @@ export function emitBlock(block: Block, ctx: CompileContext): string | null {
         if (tag === undefined) return null
         speaker = `${tag} `
       }
-      return `${speaker}${sayText(block.text, ctx)}`
+      const line = `${speaker}${sayText(block.text, ctx)}`
+      const voice = lookupAsset(project, block.voiceAssetId)
+      const voiceTo = voice && voice.kind === 'voice' ? audioPath(voice, names) : null
+      if (!voice || voiceTo === null) return line
+      useAsset(ctx, voice.id, voiceTo)
+      return `voice ${pythonString(voiceTo)}\n${line}`
     }
     case 'background': {
       if (block.assetId === null) return withTransition('scene black', block.transition)
@@ -86,7 +93,17 @@ export function emitBlock(block: Block, ctx: CompileContext): string | null {
       const to = asset ? spritePath(asset, tag, attribute) : null
       if (!asset || to === null) return null
       useAsset(ctx, asset.id, to)
-      return withTransition(`show ${tag} ${attribute} at ${block.position}`, block.transition)
+      const layer = block.zorder !== 0 ? ` zorder ${pythonNumber(block.zorder)}` : ''
+      if (block.placement.mode === 'custom') {
+        const p = block.placement
+        const lines = [`show ${tag} ${attribute}${layer}:`, `    xalign ${pythonFloat(p.xalign)}`, `    yalign ${pythonFloat(p.yalign)}`]
+        if (p.zoom !== 1) lines.push(`    zoom ${pythonNumber(p.zoom)}`)
+        if (p.rotate !== 0) lines.push(`    rotate ${pythonNumber(p.rotate)}`)
+        if (p.alpha !== 1) lines.push(`    alpha ${pythonNumber(p.alpha)}`)
+        if (block.transition !== 'none') lines.push(`with ${block.transition}`)
+        return lines.join('\n')
+      }
+      return withTransition(`show ${tag} ${attribute} at ${block.position}${layer}`, block.transition)
     }
     case 'hide': {
       if (block.characterId === null) return null
@@ -95,19 +112,22 @@ export function emitBlock(block: Block, ctx: CompileContext): string | null {
       return withTransition(`hide ${tag}`, block.transition)
     }
     case 'playMusic': {
-      if (block.channel !== 'music') return null
+      const kind = block.channel === 'ambient' ? 'ambient' : 'music'
       const asset = lookupAsset(project, block.assetId)
-      const to = asset && asset.kind === 'music' ? audioPath(asset, names) : null
+      const to = asset && asset.kind === kind ? audioPath(asset, names) : null
       if (!asset || to === null) return null
       useAsset(ctx, asset.id, to)
-      let line = `play music ${pythonString(to)}`
+      if (kind === 'ambient') ctx.usesAmbient = true
+      let line = `play ${block.channel} ${pythonString(to)}`
       if (block.fadeIn > 0) line += ` fadein ${pythonDuration(block.fadeIn)}`
       if (!block.loop) line += ' noloop'
       return line
     }
-    case 'stopMusic':
-      if (block.channel !== 'music') return null
-      return block.fadeOut > 0 ? `stop music fadeout ${pythonDuration(block.fadeOut)}` : 'stop music'
+    case 'stopMusic': {
+      if (block.channel === 'ambient') ctx.usesAmbient = true
+      const line = `stop ${block.channel}`
+      return block.fadeOut > 0 ? `${line} fadeout ${pythonDuration(block.fadeOut)}` : line
+    }
     case 'playSound': {
       const asset = lookupAsset(project, block.assetId)
       const to = asset && asset.kind === 'sound' ? audioPath(asset, names) : null
@@ -121,6 +141,24 @@ export function emitBlock(block: Block, ctx: CompileContext): string | null {
       return block.seconds === null ? 'pause' : `pause ${pythonDuration(block.seconds)}`
     case 'transition':
       return block.transition === 'none' ? null : `with ${block.transition}`
+    case 'ask': {
+      const variable = block.variableId === null ? undefined : project.variables[block.variableId]
+      const name = variableName(ctx, block.variableId)
+      if (!variable || variable.type !== 'text' || name === null) return null
+      const length = block.maxLength > 0 ? `, length=${pythonNumber(Math.floor(block.maxLength))}` : ''
+      return `$ ${name} = renpy.input(${sayText(block.prompt, ctx)}, default=${pythonString(block.defaultText)}${length}).strip()`
+    }
+    case 'movie': {
+      const asset = lookupAsset(project, block.assetId)
+      const to = asset ? moviePath(asset, names) : null
+      if (!asset || to === null) return null
+      useAsset(ctx, asset.id, to)
+      return `$ renpy.movie_cutscene(${pythonString(to)})`
+    }
+    case 'window':
+      return `window ${block.action}`
+    case 'clearPage':
+      return 'nvl clear'
     default:
       return null
   }

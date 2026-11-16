@@ -71,7 +71,8 @@ export function summarizeBlock(block: Block, project: Project): BlockSummary {
       const c = block.characterId === null ? undefined : project.characters[block.characterId]
       if (!c) return { title: 'Show', detail: block.characterId === null ? 'Pick a character' : 'Missing character' }
       const expr = block.expressionId === null ? undefined : c.expressions.find((e) => e.id === block.expressionId)
-      const parts = [c.name, expr ? expr.name : 'no expression picked', POSITION_WORD[block.position]]
+      const where = block.placement.mode === 'custom' ? 'custom position' : POSITION_WORD[block.position]
+      const parts = [c.name, expr ? expr.name : 'no expression picked', where]
       return { title: 'Show', detail: withTransition(parts, block.transition) }
     }
     case 'hide': {
@@ -80,13 +81,13 @@ export function summarizeBlock(block: Block, project: Project): BlockSummary {
       return { title: 'Hide', detail: withTransition([c.name], block.transition) }
     }
     case 'playMusic': {
-      const parts = [assetName(project, block.assetId, 'Pick a track')]
+      const parts = [assetName(project, block.assetId, block.channel === 'ambient' ? 'Pick an ambient sound' : 'Pick a track')]
       if (block.fadeIn > 0) parts.push(`fade in ${seconds(block.fadeIn)}`)
       if (!block.loop) parts.push('plays once')
-      return { title: 'Play music', detail: parts.join(' · ') }
+      return { title: block.channel === 'ambient' ? 'Play ambient' : 'Play music', detail: parts.join(' · ') }
     }
     case 'stopMusic':
-      return { title: 'Stop music', detail: block.fadeOut > 0 ? `fade out ${seconds(block.fadeOut)}` : 'right away' }
+      return { title: block.channel === 'ambient' ? 'Stop ambient' : 'Stop music', detail: block.fadeOut > 0 ? `fade out ${seconds(block.fadeOut)}` : 'right away' }
     case 'playSound':
       return { title: 'Play sound', detail: assetName(project, block.assetId, 'Pick a sound') }
     case 'setVariable':
@@ -98,6 +99,17 @@ export function summarizeBlock(block: Block, project: Project): BlockSummary {
       }
     case 'transition':
       return { title: 'Transition', detail: transitionLabel(block.transition) }
+    case 'ask': {
+      const variable = block.variableId === null ? undefined : project.variables[block.variableId]
+      const prompt = block.prompt.trim() === '' ? 'no question yet' : `"${oneLine(block.prompt, 40)}"`
+      return { title: 'Ask the player', detail: `${prompt} → ${variable ? variable.name : 'pick a variable'}` }
+    }
+    case 'movie':
+      return { title: 'Movie', detail: assetName(project, block.assetId, 'Pick a movie') }
+    case 'window':
+      return { title: 'Text box', detail: block.action === 'show' ? 'Show' : 'Hide' }
+    case 'clearPage':
+      return { title: 'Clear page', detail: 'Start a fresh NVL page' }
     default:
       return { title: 'Block', detail: (block as { type: string }).type }
   }

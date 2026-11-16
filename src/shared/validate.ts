@@ -1,5 +1,6 @@
 import type { Block, Condition, Effect, Id, Project, Scene, StagePosition } from './model'
 import { deriveEdges } from './edges'
+import { labelLockProblem } from './naming'
 
 export interface Problem {
   severity: 'error' | 'warning'
@@ -125,6 +126,9 @@ export function validateProject(project: Project): Problem[] {
     switch (block.type) {
       case 'say':
         if (block.characterId !== null) usedCharacters.add(block.characterId)
+        if (block.voiceAssetId !== null && project.assets[block.voiceAssetId]?.kind === 'voice') {
+          usedAssets.add(block.voiceAssetId)
+        }
         if (block.text.trim() === '') {
           add({
             severity: 'warning',
@@ -197,6 +201,38 @@ export function validateProject(project: Project): Problem[] {
       case 'setVariable':
         checkEffect(scene, block.effect, `the Variable block (${where})`, block.id)
         break
+      case 'ask': {
+        const variable = block.variableId === null ? undefined : project.variables[block.variableId]
+        if (!variable) {
+          add({
+            severity: 'error',
+            message: `${sceneOf(scene)}: the Ask the player block (block ${index + 1}) has no variable to store the answer in. Pick a text variable.`,
+            sceneId: scene.id,
+            blockId: block.id
+          })
+          break
+        }
+        usedVariables.add(variable.id)
+        if (variable.type !== 'text') {
+          add({
+            severity: 'error',
+            message: `${sceneOf(scene)}: the Ask the player block (block ${index + 1}) stores the answer in "${variable.name}", which is not a text variable. Pick a text variable.`,
+            sceneId: scene.id,
+            blockId: block.id
+          })
+        }
+        break
+      }
+      case 'movie':
+        if (block.assetId === null || !project.assets[block.assetId]) {
+          add({
+            severity: 'error',
+            message: `${sceneOf(scene)}: the Movie block (block ${index + 1}) has no movie. Pick a movie file.`,
+            sceneId: scene.id,
+            blockId: block.id
+          })
+        } else usedAssets.add(block.assetId)
+        break
       default:
         break
     }
@@ -224,12 +260,54 @@ export function validateProject(project: Project): Problem[] {
   }
 
   const targetMissing = (target: Id | null): boolean => target === null || !project.scenes[target]
+  let splashSeen = false
 
   for (const scene of Object.values(project.scenes)) {
     scene.blocks.forEach((block, i) => checkBlock(scene, block, i))
     stageWarnings(scene)
     if (scene.blocks.length === 0) {
       add({ severity: 'warning', message: `${sceneOf(scene)}: this scene has no blocks.`, sceneId: scene.id })
+    }
+
+    if (scene.labelLock !== null && scene.id !== project.startSceneId) {
+      const why = labelLockProblem(project, scene.id, scene.labelLock)
+      if (why !== null) {
+        add({
+          severity: 'error',
+          message: `${sceneOf(scene)}: the locked label "${scene.labelLock}" can't be used. ${why}`,
+          sceneId: scene.id
+        })
+      }
+    } else if (scene.labelLock !== null) {
+      add({
+        severity: 'warning',
+        message: `${sceneOf(scene)}: this is the start scene, so its label is always "start". The locked label is ignored.`,
+        sceneId: scene.id
+      })
+    }
+    if (scene.role === 'splashscreen') {
+      if (scene.id === project.startSceneId) {
+        add({
+          severity: 'error',
+          message: `${sceneOf(scene)}: the start scene can't also be the splash screen. Choose another start scene or set this scene's role back to Normal.`,
+          sceneId: scene.id
+        })
+      }
+      if (scene.ending.type !== 'end') {
+        add({
+          severity: 'error',
+          message: `${sceneOf(scene)}: a splash screen scene must finish with "End of story" (that is what hands over to the main menu). Change its ending.`,
+          sceneId: scene.id
+        })
+      }
+      if (!splashSeen) splashSeen = true
+      else {
+        add({
+          severity: 'error',
+          message: `${sceneOf(scene)}: only one scene can be the splash screen. Set this scene's role back to Normal.`,
+          sceneId: scene.id
+        })
+      }
     }
 
     const e = scene.ending
@@ -327,7 +405,7 @@ export function validateProject(project: Project): Problem[] {
       }
     }
     for (const scene of Object.values(project.scenes)) {
-      if (!reachable.has(scene.id)) {
+      if (!reachable.has(scene.id) && scene.role !== 'splashscreen') {
         add({
           severity: 'warning',
           message: `${sceneOf(scene)}: no path from the start scene leads here, so players will never see it.`,

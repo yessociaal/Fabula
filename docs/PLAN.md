@@ -414,7 +414,7 @@ Defensive rule: any block or exit that points at something missing (null or dele
 2. `"` → `\"`
 3. newline → `\n` (the two characters)
 4. `[`: if the text at this point matches `[name]` where `name` is in `knownVariableNames`, keep it (this is how "Insert variable" works). Otherwise emit `[[`.
-5. `{`: if it starts one of `{b} {/b} {i} {/i} {u} {/u}`, keep it. Otherwise emit `{{`.
+5. `{`: if it starts one of the allowed text tags, keep it. Otherwise emit `{{`. The allowed tags are exactly `{b} {/b} {i} {/i} {u} {/u} {color=#rrggbb} {/color} {size=N} {/size} {w} {p} {cps=N} {/cps}`, where `#rrggbb` is a `#` and six hex digits and `N` is one to three digits (whole numbers only). A tag with any other argument (`{color=red}`, `{size=big}`, `{w=1}`) is not allowed and is doubled. Closing tags are kept on their own; Ren'Py lint reports a closing tag whose opening tag was doubled, so the toolbar always inserts the pair.
 6. `%` → `%%` (Ren'Py 8.4.1 lint rejects a lone `%` in dialogue; verified in Phase 3). Character names in `Character("…")` are not covered by this; check them with lint if a name contains `%`.
 
 `pythonString(s)`: steps 1–3 only, wrapped in double quotes. Used for `Character("…")` and text variable values.
@@ -428,16 +428,16 @@ Defensive rule: any block or exit that points at something missing (null or dele
 | Model | Output |
 |---|---|
 | say with voice | `voice "audio/voice/anna_01.ogg"` on the line before the dialogue line |
-| Character, NVL mode | `define anna = Character("Anna", kind=nvl, color="#e86a92")` |
-| Character with side image | file `images/characters/side <tag>.<ext>` and `Character(…, image="<tag>")` |
-| Persistent variable | `default persistent.seen_ending = False`; every reference becomes `persistent.seen_ending` |
+| Character, NVL mode | `define anna = Character("Anna", kind=nvl, color="#e86a92")`. When at least one character is NVL, the compiler also writes `define narrator = nvl_narrator` right after the character definitions, so narration lands on the same NVL page (verified in Ren'Py 8.4.1 docs, "NVL-Mode Tutorial", and by running a game). Menus stay in the normal full-screen style. |
+| Character with side image | file `images/characters/side <tag>.<ext>` and `Character(…, image="<tag>")` as the last argument (Ren'Py defines the image `side <tag>` from the file name and shows it beside the text box whatever expression is on stage) |
+| Persistent variable | `default persistent.seen_ending = False`; every reference becomes `persistent.seen_ending` (conditions, effects, ask, and text interpolation `[persistent.seen_ending]`; the plain `[seen_ending]` is not a known name, so it is escaped as `[[seen_ending]`) |
 | playMusic on ambient | `play ambient "audio/ambient/rain.ogg" fadein 1.0`; and once, at the top of `script.rpy`: `init python:` / `    renpy.music.register_channel("ambient", "sfx", loop=True)` (only when the story uses ambient) |
-| show, custom placement | `show anna happy:` followed by an indented ATL block with `xalign`, `yalign`, and only the non-default ones of `zoom`, `rotate`, `alpha`; a transition becomes a separate `with dissolve` line |
+| show, custom placement | `show anna happy:` followed by an indented ATL block with `xalign`, `yalign` (always printed as floats such as `1.0`, because ATL reads a bare `1` as one pixel), and only the non-default ones of `zoom`, `rotate`, `alpha`; a transition becomes a separate `with dissolve` line at the same indentation as `show`. A layer order goes before the colon: `show anna happy zorder 2:` |
 | show, zorder ≠ 0 | ` zorder 2` appended |
 | visit | `call cellar` |
 | if | `if COND:` + indented blocks; `else:` + indented blocks when `otherwise` is non-empty. An empty `then` emits `pass`. |
 | inlineChoice | `menu:` with each option's blocks indented under it (`pass` if empty). No jumps. |
-| ask | `$ player_name = renpy.input("What is your name?", default="Alex", length=20).strip()` (text variables only) |
+| ask | `$ player_name = renpy.input("What is your name?", default="Alex", length=20).strip()` (text variables only). The prompt is escaped like dialogue, the default like a plain string; `length=` is left out when the maximum is 0 or less. |
 | movie | `$ renpy.movie_cutscene("movies/intro.webm")`; file copied to `movies/` |
 | window | `window show` / `window hide` |
 | clearPage | `nvl clear` |
@@ -445,8 +445,8 @@ Defensive rule: any block or exit that points at something missing (null or dele
 | code block | the lines verbatim, each prefixed with the current indentation. `@scene(Scene name)` is replaced by that scene's label. |
 | code ending | the lines verbatim; `@exit(name)` is replaced by the target scene's label |
 | screen ending | `call screen office_desk`, then `if _return == "drawer":` / `elif …:` each with one `jump`. One exit per element whose action is `leave`; the return value is `slugify(element.name)`. |
-| Scene with `labelLock` | that exact label is used (validated as a legal, unique identifier) |
-| Scene role `splashscreen` | label `splashscreen`; its ending must be End (`return`) |
+| Scene with `labelLock` | that exact label is used. Legal means a letter followed by letters, digits and underscores; reserved words are refused, except the labels Ren'Py itself calls (`quit`, `main_menu`, `after_load`, `before_main_menu`, `after_warp`), which are exactly why the lock exists. It must be unique among locks. The name table reserves it before any other label is chosen, so other scenes get `_2`, `_3`. The start scene is always `start` and ignores a lock (a warning). |
+| Scene role `splashscreen` | label `splashscreen`; its ending must be End (`return`). Only one scene may have this role and it cannot be the start scene (errors). A splash screen scene is not reported as unreachable. |
 | ScriptFile | written unchanged to `<name>.rpy` |
 | ScreenDef | all screens go in `interface.rpy`, one `screen <slug>():` each, see below |
 

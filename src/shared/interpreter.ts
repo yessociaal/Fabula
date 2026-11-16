@@ -13,6 +13,14 @@ export interface PlayMenuOption {
   text: string
 }
 
+/** An Ask the player block waiting for the typed answer. */
+export interface PlayAsk {
+  variableId: Id | null
+  prompt: string
+  defaultText: string
+  maxLength: number
+}
+
 export interface PlayState {
   sceneId: Id | null
   blockIndex: number
@@ -22,7 +30,17 @@ export interface PlayState {
   /** Counts playSound blocks; `sound` holds the latest one. The view plays it when `soundSeq` changes. */
   soundSeq: number
   sound: Id | null
+  /** Counts voiced lines; `voice` holds the latest voice file. The view plays it when `voiceSeq` changes. */
+  voiceSeq: number
+  voice: Id | null
+  /** The ambient track (second audio channel) and whether it loops. */
+  ambient: Id | null
+  ambientLoop: boolean
   line: PlayLine | null
+  /** Waiting for the player to type an answer (Ask the player). */
+  ask: PlayAsk | null
+  /** Waiting on a movie block: Quick play shows a placeholder and continues on click. */
+  movie: { assetId: Id | null } | null
   /** Waiting on a pause block: null seconds = wait for a click. */
   pause: { seconds: number | null } | null
   /** Waiting for the player to pick one of these (already filtered by their conditions). */
@@ -35,7 +53,7 @@ export interface PlayState {
   notice: string | null
 }
 
-export type PlayInput = { type: 'advance' } | { type: 'choose'; optionId: Id }
+export type PlayInput = { type: 'advance' } | { type: 'choose'; optionId: Id } | { type: 'answer'; text: string }
 
 export const NOWHERE_NOTICE = 'This exit goes nowhere'
 /** A story that loops forever without ever waiting for the player is stopped after this many actions in one step. */
@@ -83,6 +101,8 @@ function finish(s: PlayState, notice: string | null): void {
   s.line = null
   s.pause = null
   s.menu = null
+  s.ask = null
+  s.movie = null
   s.notice = notice
 }
 
@@ -107,6 +127,21 @@ function run(project: Project, s: PlayState): void {
       switch (block.type) {
         case 'say':
           s.line = { characterId: block.characterId, text: block.text }
+          if (block.voiceAssetId) {
+            s.voiceSeq++
+            s.voice = block.voiceAssetId
+          }
+          return
+        case 'ask':
+          s.ask = {
+            variableId: block.variableId,
+            prompt: block.prompt,
+            defaultText: block.defaultText,
+            maxLength: block.maxLength
+          }
+          return
+        case 'movie':
+          s.movie = { assetId: block.assetId }
           return
         case 'pause':
           s.pause = { seconds: block.seconds }
@@ -123,6 +158,14 @@ function run(project: Project, s: PlayState): void {
         case 'playMusic':
           applyBlockToStage(s.stage, block)
           if (block.channel === 'music') s.musicLoop = block.loop
+          else {
+            s.ambient = block.assetId
+            s.ambientLoop = block.loop
+          }
+          break
+        case 'stopMusic':
+          applyBlockToStage(s.stage, block)
+          if (block.channel === 'ambient') s.ambient = null
           break
         default:
           applyBlockToStage(s.stage, block)
@@ -166,7 +209,13 @@ export function start(project: Project, sceneId: Id | null): PlayState {
     musicLoop: true,
     soundSeq: 0,
     sound: null,
+    voiceSeq: 0,
+    voice: null,
+    ambient: null,
+    ambientLoop: true,
     line: null,
+    ask: null,
+    movie: null,
     pause: null,
     menu: null,
     variables: defaultVariables(project),
@@ -185,10 +234,23 @@ export function start(project: Project, sceneId: Id | null): PlayState {
 export function step(project: Project, state: PlayState, input: PlayInput): PlayState {
   if (state.status !== 'running') return state
   const s = cloneState(state)
+  if (input.type === 'answer') {
+    const ask = s.ask
+    if (!ask) return state
+    s.ask = null
+    const variable = ask.variableId === null ? undefined : project.variables[ask.variableId]
+    if (variable && variable.type === 'text') {
+      const limited = ask.maxLength > 0 ? input.text.slice(0, Math.floor(ask.maxLength)) : input.text
+      s.variables = { ...s.variables, [variable.id]: limited.trim() }
+    }
+    run(project, s)
+    return s
+  }
   if (input.type === 'advance') {
-    if (s.menu) return state
+    if (s.menu || s.ask) return state
     s.line = null
     s.pause = null
+    s.movie = null
     run(project, s)
     return s
   }

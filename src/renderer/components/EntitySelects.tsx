@@ -134,6 +134,8 @@ interface VariableSelectProps {
   value: Id | null
   onChange: (variableId: Id) => void
   placeholder?: string
+  /** List (and create) only variables of this type. */
+  onlyType?: Variable['type']
   'aria-label': string
 }
 
@@ -143,36 +145,44 @@ const TYPE_OPTIONS: { value: Variable['type']; label: string }[] = [
   { value: 'text', label: 'Text' }
 ]
 
-export function VariableSelect({ value, onChange, placeholder = 'Choose a variable…', ...rest }: VariableSelectProps) {
+export function VariableSelect({ value, onChange, placeholder = 'Choose a variable…', onlyType, ...rest }: VariableSelectProps) {
   const project = useProjectStore((s) => s.project)
   const [creating, setCreating] = useState(false)
 
   const items = useMemo<DropdownItem<string>[]>(() => {
     if (!project) return []
     const list: DropdownItem<string>[] = project.variableOrder
-      .filter((id) => project.variables[id])
+      .filter((id) => project.variables[id] && (!onlyType || project.variables[id].type === onlyType))
       .map((id) => ({ kind: 'item', value: id, label: project.variables[id].name || 'Unnamed variable' }))
     list.push({ kind: 'separator' }, { kind: 'action', label: '+ New variable…', onSelect: () => setCreating(true) })
     return list
-  }, [project])
+  }, [project, onlyType])
 
   return (
     <>
       <Dropdown value={value} items={items} onChange={onChange} placeholder={placeholder} aria-label={rest['aria-label']} />
-      {creating && <NewVariableModal onCancel={() => setCreating(false)} onCreated={(id) => { setCreating(false); onChange(id) }} />}
+      {creating && <NewVariableModal onlyType={onlyType} onCancel={() => setCreating(false)} onCreated={(id) => { setCreating(false); onChange(id) }} />}
     </>
   )
 }
 
 /** Asks for a name and a type, creates the variable and reports its id. */
-export function NewVariableModal({ onCancel, onCreated }: { onCancel: () => void; onCreated: (variableId: Id) => void }) {
+export function NewVariableModal({
+  onCancel,
+  onCreated,
+  onlyType
+}: {
+  onCancel: () => void
+  onCreated: (variableId: Id) => void
+  onlyType?: Variable['type']
+}) {
   const variables = useProjectStore((s) => s.project?.variables)
   return (
     <NewItemModal
       title="New variable"
       initialName={uniqueName('New variable', Object.values(variables ?? {}).map((v) => v.name))}
       confirmLabel="Create variable"
-      typeOptions={TYPE_OPTIONS}
+      typeOptions={onlyType ? TYPE_OPTIONS.filter((t) => t.value === onlyType) : TYPE_OPTIONS}
       onCancel={onCancel}
       onCreate={(name, type) => onCreated(useProjectStore.getState().addVariable({ name, type: (type as Variable['type']) ?? 'number' }))}
     />

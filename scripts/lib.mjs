@@ -109,3 +109,15 @@ export function makeWav() {
     ...tag('data'), ...le32(samples.length), ...samples
   ])
 }
+
+/**
+ * Placeholder file contents by extension: a real 1x1 PNG, a real silent WAV, and for movies and fonts a zero-filled
+ * placeholder (building a valid WebM or TrueType file by hand is not worth it; lint only checks that the file exists,
+ * and the game checks below never play the movie).
+ */
+export function placeholderFor(path) {
+  const lower = path.toLowerCase()
+  if (lower.endsWith('.png')) return makePng()
+  if (/\.(webm|ogv|mkv|mp4|ttf|otf)$/.test(lower)) return Buffer.alloc(64)
+  return makeWav()
+}

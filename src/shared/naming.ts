@@ -23,6 +23,46 @@ export const RESERVED_WORDS: ReadonlySet<string> = new Set(
   ).split(' ')
 )
 
+/**
+ * Labels Ren'Py itself calls at certain moments. They are in the reserved list so no ordinary scene can end up
+ * with one by accident, but a scene may take one on purpose with "Lock label".
+ */
+export const LIFECYCLE_LABELS: ReadonlySet<string> = new Set([
+  'quit',
+  'main_menu',
+  'after_load',
+  'before_main_menu',
+  'after_warp'
+])
+
+const LABEL_SHAPE = /^[A-Za-z][A-Za-z0-9_]*$/
+
+/** Whether `s` has the shape of a plain Ren'Py label (ASCII letters, digits and underscores, starting with a letter). */
+export function labelShapeOk(s: string): boolean {
+  return LABEL_SHAPE.test(s)
+}
+
+/**
+ * Why `value` cannot be the locked label of scene `sceneId`, in plain English, or null when it is fine.
+ * Checks: legal identifier, not a reserved word (the labels Ren'Py calls on its own are allowed on purpose),
+ * and not already the label of another scene (`start` belongs to the start scene, `splashscreen` to a splash screen scene).
+ */
+export function labelLockProblem(project: Project, sceneId: Id, value: string): string | null {
+  if (value === '') return 'Type a label, or leave this empty to go back to the automatic one.'
+  if (!labelShapeOk(value)) {
+    return 'A label must start with a letter and use only letters, numbers and underscores (no spaces).'
+  }
+  const lower = value.toLowerCase()
+  if (RESERVED_WORDS.has(lower) && !LIFECYCLE_LABELS.has(lower)) {
+    return `"${value}" is a word Ren'Py or Python already uses. Pick another label.`
+  }
+  for (const other of Object.values(project.scenes)) {
+    if (other.id === sceneId) continue
+    if (other.labelLock === value) return `The scene "${other.name}" already uses the label "${value}".`
+  }
+  return null
+}
+
 export interface NameTable {
   /** scene id -> label */
   sceneLabels: Record<Id, string>
@@ -30,6 +70,8 @@ export interface NameTable {
   characters: Record<Id, string>
   /** variable id -> variable name */
   variables: Record<Id, string>
+  /** variable id -> how Python and dialogue refer to it: `name`, or `persistent.name` for a remembered variable */
+  variableRefs: Record<Id, string>
   /** expression id -> attribute name (unique per character) */
   expressions: Record<Id, string>
   /** background asset id -> image name, e.g. "bg forest" */
@@ -82,20 +124,38 @@ export function buildNameTable(project: Project): NameTable {
     sceneLabels: {},
     characters: {},
     variables: {},
+    variableRefs: {},
     expressions: {},
     backgrounds: {},
     stems: {},
     chapterFiles: {}
   }
 
-  // Scene labels. Unchaptered scenes first, then by chapter order.
+  // Scene labels. The start scene is always `start`; a splash screen scene is `splashscreen`;
+  // a locked label is reserved first so that nothing else can take it; the rest are slugs made unique.
   const labels = new Set<string>()
-  if (project.startSceneId && project.scenes[project.startSceneId]) {
-    table.sceneLabels[project.startSceneId] = 'start'
+  const startId = project.startSceneId && project.scenes[project.startSceneId] ? project.startSceneId : null
+  if (startId) {
+    table.sceneLabels[startId] = 'start'
     labels.add('start')
   }
-  for (const scene of sceneOrder(project)) {
-    if (scene.id === project.startSceneId) continue
+  const ordered = sceneOrder(project).filter((s) => s.id !== startId)
+  const locked = new Set<Id>()
+  for (const scene of ordered) {
+    if (scene.role === 'splashscreen' && !labels.has('splashscreen')) {
+      table.sceneLabels[scene.id] = 'splashscreen'
+      labels.add('splashscreen')
+      locked.add(scene.id)
+    }
+  }
+  for (const scene of ordered) {
+    if (locked.has(scene.id) || scene.labelLock === null || !labelShapeOk(scene.labelLock) || labels.has(scene.labelLock)) continue
+    table.sceneLabels[scene.id] = scene.labelLock
+    labels.add(scene.labelLock)
+    locked.add(scene.id)
+  }
+  for (const scene of ordered) {
+    if (locked.has(scene.id)) continue
     let slug = slugify(scene.name, 'scene')
     if (RESERVED_WORDS.has(slug)) slug += '_scene'
     table.sceneLabels[scene.id] = unique(slug, labels)
@@ -119,7 +179,9 @@ export function buildNameTable(project: Project): NameTable {
     if (!v) continue
     let slug = slugify(v.name, 'value')
     if (RESERVED_WORDS.has(slug)) slug += '_value'
-    table.variables[vid] = unique(slug, store)
+    const name = unique(slug, store)
+    table.variables[vid] = name
+    table.variableRefs[vid] = v.persistent ? `persistent.${name}` : name
   }
 
   // Assets in id-sorted order (assets have no order array), per-kind namespaces.

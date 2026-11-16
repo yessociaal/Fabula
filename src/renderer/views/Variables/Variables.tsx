@@ -54,6 +54,7 @@ export default function Variables() {
               <th>Name</th>
               <th>Type</th>
               <th>Starting value</th>
+              <th title="Kept between playthroughs, like which endings the player has seen">Remember across playthroughs</th>
               <th>Notes</th>
               <th>Used</th>
               <th />
@@ -111,6 +112,17 @@ export default function Variables() {
                         onCommit={(t) => store().updateVariable(id, { defaultValue: t })}
                       />
                     )}
+                  </td>
+                  <td>
+                    <label className="check-row">
+                      <input
+                        type="checkbox"
+                        aria-label={`Remember ${v.name} across playthroughs`}
+                        checked={v.persistent}
+                        onChange={(e) => store().updateVariable(id, { persistent: e.target.checked })}
+                      />
+                      {v.persistent ? 'Remembered' : 'No'}
+                    </label>
                   </td>
                   <td>
                     <CommitField

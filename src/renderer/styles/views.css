@@ -448,3 +448,14 @@
   color: var(--muted);
   white-space: nowrap;
 }
+
+.side-image {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.side-tile {
+  width: 90px;
+}

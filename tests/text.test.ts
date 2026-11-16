@@ -39,7 +39,7 @@ describe('escapeSayText (rules of 6.4)', () => {
     expect(say('{b}a{/b} {i}b{/i} {u}c{/u}')).toBe('{b}a{/b} {i}b{/i} {u}c{/u}')
   })
   it('step 5: other braces are doubled', () => {
-    expect(say('{color=#f00}x{/color}')).toBe('{{color=#f00}x{{/color}')
+    expect(say('{color=#f00}x{/color}')).toBe('{{color=#f00}x{/color}')
     expect(say('{B}x')).toBe('{{B}x')
     expect(say('{ b}')).toBe('{{ b}')
     expect(say('{')).toBe('{{')
@@ -52,8 +52,8 @@ describe('escapeSayText (rules of 6.4)', () => {
     expect(say('50% off\nok')).toBe('50%% off\\nok')
   })
   it('combined: all rules in one string', () => {
-    expect(say('A "q" \\ [name] [x] {b}b{/b} {p} 100%\nend')).toBe(
-      'A \\"q\\" \\\\ [name] [[x] {b}b{/b} {{p} 100%%\\nend'
+    expect(say('A "q" \\ [name] [x] {b}b{/b} {z} 100%\nend')).toBe(
+      'A \\"q\\" \\\\ [name] [[x] {b}b{/b} {{z} 100%%\\nend'
     )
   })
   it('a backslash before [ is escaped and the name is still kept', () => {

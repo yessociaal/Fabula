@@ -1,10 +1,12 @@
 import type { Asset, Character, Id, Project, StagePosition } from './model'
-import type { StageSprite } from './stage'
+import type { CustomPlacement, StageSprite } from './stage'
 import { buildNameTable } from './naming'
 
 export interface ResolvedSprite {
   key: string
   position: StagePosition
+  placement?: CustomPlacement
+  zorder?: number
   /** The uploaded image, or null when the art is missing. */
   asset: Asset | null
   /** Shown in the dashed box when there is no art, e.g. "Anna · happy". */
@@ -28,7 +30,10 @@ export function resolveSprites(
     const expression = character?.expressions.find((e) => e.id === s.expressionId)
     const asset = expression?.assetId ? (assets[expression.assetId] ?? null) : null
     const label = [character?.name ?? 'Unknown character', expression?.name].filter(Boolean).join(' · ')
-    return { key: s.characterId, position: s.position, asset, label }
+    const out: ResolvedSprite = { key: s.characterId, position: s.position, asset, label }
+    if (s.placement) out.placement = s.placement
+    if (s.zorder !== undefined) out.zorder = s.zorder
+    return out
   })
 }
 
@@ -43,7 +48,7 @@ export function variableResolver(
   project: Project,
   values: Record<Id, boolean | number | string>
 ): (name: string) => string | undefined {
-  const names = buildNameTable(project).variables
+  const names = buildNameTable(project).variableRefs
   const byName = new Map<string, Id>()
   for (const [id, name] of Object.entries(names)) byName.set(name, id)
   return (name) => {

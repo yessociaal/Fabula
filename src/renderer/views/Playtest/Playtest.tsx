@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, ChevronRight, PanelRightClose, PanelRightOpen, Pencil, RotateCcw } from 'lucide-react'
 import type { Id, Project } from '@shared/model'
 import { start, step, type PlayInput, type PlayState } from '@shared/interpreter'
+import { buildNameTable } from '@shared/naming'
 import { dialogueFor, variableResolver } from '@shared/stageView'
 import { api } from '../../api'
 import { Button } from '../../components/Button'
@@ -43,10 +44,50 @@ function useQuickPlayAudio(project: Project, dir: string | null, state: PlayStat
     }
   }, [musicId, loop, project, dir])
 
+  // The ambient track plays on its own second element, under the music.
+  const ambientEl = useRef<HTMLAudioElement | null>(null)
+  const ambientUrl = useRef<string | null>(null)
+  const ambientId = state.ambient
+  const ambientLoop = state.ambientLoop
+  useEffect(() => {
+    const asset = ambientId ? project.assets[ambientId] : undefined
+    const url = asset && dir ? api.assetUrl(dir, asset.file) : null
+    if (!url) {
+      ambientEl.current?.pause()
+      ambientUrl.current = null
+      return
+    }
+    if (!ambientEl.current) ambientEl.current = new Audio()
+    const el = ambientEl.current
+    el.loop = ambientLoop
+    if (ambientUrl.current !== url) {
+      ambientUrl.current = url
+      el.src = url
+      el.play().catch(() => undefined)
+    }
+  }, [ambientId, ambientLoop, project, dir])
+
+  // A voiced line plays once when its line appears; the next voiced line replaces it.
+  const voiceEl = useRef<HTMLAudioElement | null>(null)
+  useEffect(() => {
+    if (state.voiceSeq === 0 || !state.voice || !dir) return
+    const asset = project.assets[state.voice]
+    if (!asset) return
+    voiceEl.current?.pause()
+    const el = new Audio(api.assetUrl(dir, asset.file))
+    voiceEl.current = el
+    el.play().catch(() => undefined)
+    // only the counter should retrigger this
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.voiceSeq])
+
   useEffect(() => {
     if (ended) {
       music.current?.pause()
       trackUrl.current = null
+      ambientEl.current?.pause()
+      ambientUrl.current = null
+      voiceEl.current?.pause()
     }
   }, [ended])
 
@@ -54,6 +95,10 @@ function useQuickPlayAudio(project: Project, dir: string | null, state: PlayStat
     () => () => {
       music.current?.pause()
       music.current = null
+      ambientEl.current?.pause()
+      ambientEl.current = null
+      voiceEl.current?.pause()
+      voiceEl.current = null
     },
     []
   )
@@ -104,8 +149,9 @@ function Run({ project, dir, fromSceneId, onRestart }: { project: Project; dir: 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.ctrlKey || e.metaKey) return
-      e.stopPropagation()
       const s = stateRef.current
+      if (s.ask && e.key !== 'Escape') return
+      e.stopPropagation()
       if (e.key === 'Escape') {
         e.preventDefault()
         close()
@@ -128,7 +174,9 @@ function Run({ project, dir, fromSceneId, onRestart }: { project: Project; dir: 
   const resolveVariable = useMemo(() => variableResolver(project, state.variables), [project, state.variables])
   const sceneName = state.sceneId ? (project.scenes[state.sceneId]?.name ?? '') : ''
   const dialogue = state.line ? dialogueFor(project, state.line.characterId, state.line.text) : null
-  const waitingForClick = state.status === 'running' && !state.menu && (state.line !== null || (state.pause !== null && state.pause.seconds === null))
+  const waitingForClick =
+    state.status === 'running' && !state.menu && !state.ask && (state.line !== null || state.movie !== null || (state.pause !== null && state.pause.seconds === null))
+  const refs = useMemo(() => buildNameTable(project).variableRefs, [project])
 
   return (
     <div className="playtest" role="dialog" aria-modal="true" aria-label="Quick play">
@@ -171,6 +219,10 @@ function Run({ project, dir, fromSceneId, onRestart }: { project: Project; dir: 
             resolveVariable={resolveVariable}
             menu={state.menu}
             onChoose={(optionId) => send({ type: 'choose', optionId })}
+            ambientName={state.ambient ? (project.assets[state.ambient]?.name ?? 'Missing sound') : null}
+            movie={state.movie ? { name: state.movie.assetId ? (project.assets[state.movie.assetId]?.name ?? null) : null } : null}
+            ask={state.ask ? { prompt: state.ask.prompt, defaultText: state.ask.defaultText, maxLength: state.ask.maxLength } : null}
+            onAnswer={(text) => send({ type: 'answer', text })}
             fade
           />
           {waitingForClick && <div className="playtest-hint">Click, Space or Enter to continue</div>}
@@ -216,7 +268,7 @@ function Run({ project, dir, fromSceneId, onRestart }: { project: Project; dir: 
                     .filter((id) => project.variables[id])
                     .map((id) => (
                       <li key={id}>
-                        <span className="playtest-var-name">{project.variables[id].name}</span>
+                        <span className="playtest-var-name">{refs[id] ?? project.variables[id].name}</span>
                         <span className="playtest-var-value">{state.variables[id] === undefined ? '' : showValue(state.variables[id])}</span>
                       </li>
                     ))}

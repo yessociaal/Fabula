@@ -1,5 +1,5 @@
 import { useDraggable } from '@dnd-kit/core'
-import { PALETTE, iconFor, type PaletteEntry } from './blockMeta'
+import { MORE_PALETTE, PALETTE, iconFor, type PaletteEntry } from './blockMeta'
 import { appendEntry } from './blockActions'
 
 export const PALETTE_ID_PREFIX = 'palette:'
@@ -40,6 +40,10 @@ export function Palette({ sceneId }: { sceneId: string }) {
     <aside className="palette" aria-label="Add block">
       <h3 className="panel-heading">Add block</h3>
       {PALETTE.map((entry) => (
+        <PaletteItem key={entry.key} entry={entry} sceneId={sceneId} />
+      ))}
+      <h3 className="panel-heading palette-group">More</h3>
+      {MORE_PALETTE.map((entry) => (
         <PaletteItem key={entry.key} entry={entry} sceneId={sceneId} />
       ))}
     </aside>

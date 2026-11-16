@@ -5,9 +5,12 @@ import { useProjectStore } from '../../../store/projectStore'
 import { useUiStore } from '../../../store/uiStore'
 import { deleteSelected, duplicateSelected } from '../blockActions'
 import { blockKindLabel } from '../blockMeta'
+import { AskInspector } from './AskInspector'
 import { BackgroundInspector } from './BackgroundInspector'
+import { ClearPageInspector } from './ClearPageInspector'
 import { DialogueInspector } from './DialogueInspector'
 import { HideInspector } from './HideInspector'
+import { MovieInspector } from './MovieInspector'
 import { PauseInspector } from './PauseInspector'
 import { PlayMusicInspector } from './PlayMusicInspector'
 import { PlaySoundInspector } from './PlaySoundInspector'
@@ -15,6 +18,7 @@ import { ShowInspector } from './ShowInspector'
 import { StopMusicInspector } from './StopMusicInspector'
 import { TransitionInspector } from './TransitionInspector'
 import { VariableInspector } from './VariableInspector'
+import { WindowInspector } from './WindowInspector'
 
 function Fields({ sceneId, block, index }: { sceneId: Id; block: Block; index: number }) {
   const p = { sceneId, index }
@@ -39,6 +43,14 @@ function Fields({ sceneId, block, index }: { sceneId: Id; block: Block; index: n
       return <PauseInspector {...p} block={block} />
     case 'transition':
       return <TransitionInspector {...p} block={block} />
+    case 'ask':
+      return <AskInspector {...p} block={block} />
+    case 'movie':
+      return <MovieInspector {...p} block={block} />
+    case 'window':
+      return <WindowInspector {...p} block={block} />
+    case 'clearPage':
+      return <ClearPageInspector {...p} block={block} />
     default:
       return <p className="muted-note">This kind of block cannot be edited here yet.</p>
   }

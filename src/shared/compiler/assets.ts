@@ -30,7 +30,21 @@ export function audioPath(asset: Asset, names: NameTable): string | null {
   if (stem === undefined) return null
   if (asset.kind === 'music') return `audio/music/${stem}${fileExtension(asset)}`
   if (asset.kind === 'sound') return `audio/sfx/${stem}${fileExtension(asset)}`
+  if (asset.kind === 'ambient') return `audio/ambient/${stem}${fileExtension(asset)}`
+  if (asset.kind === 'voice') return `audio/voice/${stem}${fileExtension(asset)}`
   return null
+}
+
+export function moviePath(asset: Asset, names: NameTable): string | null {
+  const stem = names.stems[asset.id]
+  if (asset.kind !== 'movie' || stem === undefined) return null
+  return `movies/${stem}${fileExtension(asset)}`
+}
+
+/** The side image file of a character: `images/characters/side <tag>.<ext>`. */
+export function sidePath(asset: Asset, tag: string): string | null {
+  if (asset.kind !== 'sprite') return null
+  return `images/characters/side ${tag}${fileExtension(asset)}`
 }
 
 export function lookupAsset(project: Project, id: Id | null): Asset | null {

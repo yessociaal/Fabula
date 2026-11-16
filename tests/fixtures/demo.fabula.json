@@ -101,7 +101,7 @@
           "id": "b10",
           "type": "say",
           "characterId": "c_anna",
-          "text": "She said \"hi\" \\ back, [nickname] has [courage] and [bogus] {b}bold{/b} {size=20}small{/size} 100%\nSecond line.",
+          "text": "She said \"hi\" \\ back, [nickname] has [courage] and [bogus] {b}bold{/b} {size=20}small{/size} {blink}x{/blink} 100%\nSecond line.",
           "voiceAssetId": null
         },
         {
@@ -591,10 +591,211 @@
       "blocks": [],
       "ending": {
         "type": "jump",
-        "target": "s_end"
+        "target": "s_extras"
       },
       "labelLock": null,
       "role": "normal"
+    },
+    "s_extras": {
+      "id": "s_extras",
+      "name": "Extras",
+      "notes": "Private note",
+      "position": {
+        "x": 0,
+        "y": 400
+      },
+      "chapterId": null,
+      "blocks": [
+        {
+          "id": "x01",
+          "type": "playMusic",
+          "assetId": "a_rain",
+          "fadeIn": 1,
+          "loop": true,
+          "channel": "ambient"
+        },
+        {
+          "id": "x02",
+          "type": "show",
+          "characterId": "c_anna",
+          "expressionId": "e_happy",
+          "position": "center",
+          "transition": "dissolve",
+          "placement": {
+            "mode": "custom",
+            "xalign": 0.25,
+            "yalign": 1,
+            "zoom": 1.2,
+            "rotate": 0,
+            "alpha": 0.8
+          },
+          "zorder": 2
+        },
+        {
+          "id": "x03",
+          "type": "show",
+          "characterId": "c_left",
+          "expressionId": "e_smile",
+          "position": "right",
+          "transition": "none",
+          "placement": {
+            "mode": "preset"
+          },
+          "zorder": 1
+        },
+        {
+          "id": "x04",
+          "type": "show",
+          "characterId": "c_nova",
+          "expressionId": "e_calm",
+          "position": "left",
+          "transition": "none",
+          "placement": {
+            "mode": "custom",
+            "xalign": 0.8,
+            "yalign": 0.9,
+            "zoom": 1,
+            "rotate": 15,
+            "alpha": 1
+          },
+          "zorder": 0
+        },
+        {
+          "id": "x05",
+          "type": "say",
+          "characterId": "c_anna",
+          "text": "Seen it? [persistent.seen_ending] {color=#ff0000}red{/color} {size=40}big{/size}{w} {cps=20}slow{/cps}{p}after {color=red}bad",
+          "voiceAssetId": "a_voice1"
+        },
+        {
+          "id": "x06",
+          "type": "ask",
+          "variableId": "v_nick",
+          "prompt": "What is your name?",
+          "defaultText": "Alex",
+          "maxLength": 20
+        },
+        {
+          "id": "x07",
+          "type": "window",
+          "action": "hide"
+        },
+        {
+          "id": "x08",
+          "type": "window",
+          "action": "show"
+        },
+        {
+          "id": "x09",
+          "type": "say",
+          "characterId": "c_nova",
+          "text": "I speak in NVL mode, [nickname].",
+          "voiceAssetId": null
+        },
+        {
+          "id": "x10",
+          "type": "say",
+          "characterId": null,
+          "text": "Narration on the same page.",
+          "voiceAssetId": null
+        },
+        {
+          "id": "x11",
+          "type": "clearPage"
+        },
+        {
+          "id": "x12",
+          "type": "setVariable",
+          "effect": {
+            "variableId": "v_seen",
+            "op": "set",
+            "value": true
+          }
+        },
+        {
+          "id": "x13",
+          "type": "stopMusic",
+          "fadeOut": 2,
+          "channel": "ambient"
+        }
+      ],
+      "ending": {
+        "type": "branch",
+        "cases": [
+          {
+            "id": "x_case",
+            "condition": {
+              "join": "and",
+              "clauses": [
+                {
+                  "id": "x_cl",
+                  "variableId": "v_seen",
+                  "op": "eq",
+                  "value": true
+                }
+              ]
+            },
+            "target": "s_cutscene"
+          }
+        ],
+        "elseTarget": "s_end"
+      },
+      "labelLock": null,
+      "role": "normal"
+    },
+    "s_cutscene": {
+      "id": "s_cutscene",
+      "name": "Cutscene",
+      "notes": "Private note",
+      "position": {
+        "x": 0,
+        "y": 500
+      },
+      "chapterId": null,
+      "blocks": [
+        {
+          "id": "m01",
+          "type": "movie",
+          "assetId": "a_intro"
+        },
+        {
+          "id": "m02",
+          "type": "say",
+          "characterId": null,
+          "text": "After the movie.",
+          "voiceAssetId": null
+        }
+      ],
+      "ending": {
+        "type": "jump",
+        "target": "s_end"
+      },
+      "labelLock": "cutscene_intro",
+      "role": "normal"
+    },
+    "s_splash": {
+      "id": "s_splash",
+      "name": "Splash",
+      "notes": "Private note",
+      "position": {
+        "x": 0,
+        "y": 600
+      },
+      "chapterId": null,
+      "blocks": [
+        {
+          "id": "p01",
+          "type": "say",
+          "characterId": null,
+          "text": "Presented with care.",
+          "voiceAssetId": null
+        }
+      ],
+      "ending": {
+        "type": "end"
+      },
+      "labelLock": null,
+      "role": "splashscreen"
     }
   },
   "chapters": {
@@ -660,12 +861,27 @@
           "assetId": "a_dr_neutral"
         }
       ]
+    },
+    "c_nova": {
+      "id": "c_nova",
+      "name": "Nova",
+      "color": "#5fd08a",
+      "mode": "nvl",
+      "sideAssetId": "a_nova_side",
+      "expressions": [
+        {
+          "id": "e_calm",
+          "name": "Calm",
+          "assetId": "a_nova_calm"
+        }
+      ]
     }
   },
   "characterOrder": [
     "c_anna",
     "c_left",
-    "c_dr"
+    "c_dr",
+    "c_nova"
   ],
   "variables": {
     "v_courage": {
@@ -699,13 +915,22 @@
       "defaultValue": 2.5,
       "description": "",
       "persistent": false
+    },
+    "v_seen": {
+      "id": "v_seen",
+      "name": "Seen Ending",
+      "type": "boolean",
+      "defaultValue": false,
+      "description": "",
+      "persistent": true
     }
   },
   "variableOrder": [
     "v_courage",
     "v_key",
     "v_nick",
-    "v_trust"
+    "v_trust",
+    "v_seen"
   ],
   "assets": {
     "a_forest": {
@@ -796,6 +1021,69 @@
       "file": "sounds/a_door.wav",
       "width": null,
       "height": null,
+      "bytes": 70
+    },
+    "a_rain": {
+      "id": "a_rain",
+      "kind": "ambient",
+      "name": "Rain",
+      "file": "ambient/a_rain.wav",
+      "width": null,
+      "height": null,
+      "bytes": 70
+    },
+    "a_voice1": {
+      "id": "a_voice1",
+      "kind": "voice",
+      "name": "Anna 01",
+      "file": "voice/a_voice1.wav",
+      "width": null,
+      "height": null,
+      "bytes": 70
+    },
+    "a_intro": {
+      "id": "a_intro",
+      "kind": "movie",
+      "name": "Intro",
+      "file": "movies/a_intro.webm",
+      "width": null,
+      "height": null,
+      "bytes": 64
+    },
+    "a_ui": {
+      "id": "a_ui",
+      "kind": "ui",
+      "name": "Desk",
+      "file": "ui/a_ui.png",
+      "width": 1,
+      "height": 1,
+      "bytes": 70
+    },
+    "a_font": {
+      "id": "a_font",
+      "kind": "font",
+      "name": "Handwriting",
+      "file": "fonts/a_font.ttf",
+      "width": null,
+      "height": null,
+      "bytes": 64
+    },
+    "a_nova_side": {
+      "id": "a_nova_side",
+      "kind": "sprite",
+      "name": "Nova Side",
+      "file": "sprites/a_nova_side.png",
+      "width": 1,
+      "height": 1,
+      "bytes": 70
+    },
+    "a_nova_calm": {
+      "id": "a_nova_calm",
+      "kind": "sprite",
+      "name": "Nova Calm",
+      "file": "sprites/a_nova_calm.png",
+      "width": 1,
+      "height": 1,
       "bytes": 70
     }
   },
