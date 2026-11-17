@@ -182,3 +182,15 @@
 .problem-flash {
   animation: problem-flash 1.8s ease-out;
 }
+
+.lint-problems {
+  margin: 0 0 10px;
+  padding: 8px 12px 8px 28px;
+  max-height: 20vh;
+  overflow: auto;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  user-select: text;
+}

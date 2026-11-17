@@ -60,6 +60,13 @@ export interface PlayState {
   pause: { seconds: number | null } | null
   /** Waiting for the player to pick one of these (already filtered by their conditions). */
   menu: PlayMenuOption[] | null
+  /**
+   * A code ending is showing: Quick play cannot run Ren'Py code, so the player picks which named exit to follow
+   * (ids are the NamedExit ids).
+   */
+  codeExits: PlayMenuOption[] | null
+  /** A Ren'Py code block was passed over without running (it cannot run in Quick play). */
+  skippedCode: boolean
   variables: VariableValues
   /** Names of the scenes visited, in order. */
   history: string[]
@@ -68,9 +75,17 @@ export interface PlayState {
   notice: string | null
 }
 
-export type PlayInput = { type: 'advance' } | { type: 'choose'; optionId: Id } | { type: 'answer'; text: string }
+export type PlayInput =
+  | { type: 'advance' }
+  | { type: 'choose'; optionId: Id }
+  | { type: 'answer'; text: string }
+  /** Follow one exit of a code ending. */
+  | { type: 'exit'; exitId: Id }
 
 export const NOWHERE_NOTICE = 'This exit goes nowhere'
+export const CODE_BLOCK_NOTICE = "This scene runs Ren'Py code that Quick play cannot run"
+export const CODE_ENDING_TITLE = "Ren'Py code ending: pick which exit to take"
+export const CODE_ENDING_NOTICE = "Quick play cannot run Ren'Py code. Use Play in Ren'Py to see what the code really does."
 /** A story that loops forever without ever waiting for the player is stopped after this many actions in one step. */
 const MAX_ACTIONS = 5000
 /** Scenes that visit each other without end are stopped at this many open visits. */
@@ -125,6 +140,7 @@ function finish(s: PlayState, notice: string | null): void {
   s.line = null
   s.pause = null
   s.menu = null
+  s.codeExits = null
   s.ask = null
   s.movie = null
   s.notice = notice
@@ -135,6 +151,7 @@ function goTo(project: Project, s: PlayState, target: Id | null): void {
   if (!scene) return finish(s, NOWHERE_NOTICE)
   s.sceneId = scene.id
   s.cursor = [{ i: 0 }]
+  s.skippedCode = false
   s.history.push(scene.name)
 }
 
@@ -161,6 +178,7 @@ function run(project: Project, s: PlayState): void {
           s.callStack.push({ sceneId: scene.id, cursor: s.cursor })
           s.sceneId = target.id
           s.cursor = [{ i: 0 }]
+          s.skippedCode = false
           s.history.push(target.name)
           break
         }
@@ -177,6 +195,9 @@ function run(project: Project, s: PlayState): void {
           s.inlineMenu = [...prefix, { i: at }]
           return
         }
+        case 'code':
+          if (block.code.trim() !== '') s.skippedCode = true
+          break
         case 'say':
           s.line = { characterId: block.characterId, text: block.text }
           if (block.voiceAssetId) {
@@ -260,6 +281,12 @@ function run(project: Project, s: PlayState): void {
         s.menu = options.map((o) => ({ id: o.id, text: o.text }))
         return
       }
+      case 'code': {
+        if (ending.exits.length === 0) return finish(s, "This Ren'Py code ending has no exits to follow")
+        s.codeExits = ending.exits.map((x) => ({ id: x.id, text: x.name.trim() === '' ? 'Untitled exit' : x.name }))
+        if (ending.code.trim() !== '') s.skippedCode = true
+        return
+      }
       default:
         return finish(s, 'Quick play cannot run this kind of ending')
     }
@@ -287,6 +314,8 @@ export function start(project: Project, sceneId: Id | null): PlayState {
     movie: null,
     pause: null,
     menu: null,
+    codeExits: null,
+    skippedCode: false,
     variables: defaultVariables(project),
     history: scene ? [scene.name] : [],
     status: 'running',
@@ -315,8 +344,19 @@ export function step(project: Project, state: PlayState, input: PlayInput): Play
     run(project, s)
     return s
   }
+  if (input.type === 'exit') {
+    const scene = s.sceneId ? project.scenes[s.sceneId] : undefined
+    const ending = scene?.ending
+    if (!s.codeExits || !ending || ending.type !== 'code') return state
+    const exit = ending.exits.find((x) => x.id === input.exitId)
+    if (!exit) return state
+    s.codeExits = null
+    goTo(project, s, exit.target)
+    run(project, s)
+    return s
+  }
   if (input.type === 'advance') {
-    if (s.menu || s.ask) return state
+    if (s.menu || s.ask || s.codeExits) return state
     s.line = null
     s.pause = null
     s.movie = null

@@ -31,6 +31,7 @@ function removeScenes(project: Project, ids: string[]): Project {
       for (const c of s.ending.cases) c.target = fix(c.target)
       s.ending.elseTarget = fix(s.ending.elseTarget)
     }
+    if (s.ending.type === 'code') for (const x of s.ending.exits) x.target = fix(x.target)
   }
   return next
 }

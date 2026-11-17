@@ -1,5 +1,6 @@
+import { replaceCodeRefs } from '../codeRefs'
 import type { Ending, Id } from '../model'
-import { conditionPython, emitEffect, promptLine, sayText } from './blocks'
+import { conditionPython, emitEffect, indentLines, promptLine, sayText } from './blocks'
 import type { CompileContext } from './blocks'
 
 const IND = '    '
@@ -48,6 +49,17 @@ export function emitEnding(ending: Ending, ctx: CompileContext): string | null {
       lines.push(`${IND}else:`)
       lines.push(`${IND}${IND}${jumpLine(ending.elseTarget, ctx)}`)
       return lines.join('\n')
+    }
+    case 'code': {
+      if (ending.code.trim() === '') return null
+      const counts = new Map<string, number>()
+      for (const x of ending.exits) counts.set(x.name, (counts.get(x.name) ?? 0) + 1)
+      const text = replaceCodeRefs(ending.code, 'exit', [...counts.keys()], (name) => {
+        const exit = ending.exits.find((x) => x.name === name)
+        const target = exit && counts.get(name) === 1 ? exit.target : null
+        return target !== null && ctx.project.scenes[target] ? (ctx.names.sceneLabels[target] ?? null) : null
+      })
+      return indentLines(text)
     }
     default:
       return null

@@ -1,7 +1,9 @@
 import type { Block, Condition, Effect, Id, Project, Scene, StagePosition } from './model'
 import { MAX_BLOCK_DEPTH, walkBlocks, type BlockPath } from './blockTree'
+import { findCodeRefs, mentionsLeaving } from './codeRefs'
 import { sceneSuccessors } from './edges'
 import { labelLockProblem } from './naming'
+import { scriptFileProblems } from './scriptFiles'
 
 export interface Problem {
   severity: 'error' | 'warning'
@@ -124,6 +126,14 @@ export function validateProject(project: Project): Problem[] {
 
   /** `block 3`, or `block 2.1.3` for a block inside another block. */
   const labelOf = (path: BlockPath): string => `block ${path.map((s) => s.i + 1).join('.')}`
+
+  /** scene name -> how many scenes have exactly that name */
+  const sceneNameCounts = (): Map<string, number> => {
+    const counts = new Map<string, number>()
+    for (const s of Object.values(project.scenes)) counts.set(s.name, (counts.get(s.name) ?? 0) + 1)
+    return counts
+  }
+  const nameCounts = sceneNameCounts()
 
   const checkBlock = (scene: Scene, block: Block, label: string): void => {
     const where = label
@@ -290,6 +300,20 @@ export function validateProject(project: Project): Problem[] {
         }
         break
       }
+      case 'code':
+        for (const ref of findCodeRefs(block.code, 'scene', [...nameCounts.keys()])) {
+          const count = ref.known ? (nameCounts.get(ref.name) ?? 0) : 0
+          if (count === 1) continue
+          add({
+            severity: 'error',
+            message: ref.known
+              ? `${sceneOf(scene)}: the Ren'Py code block (${label}) mentions @scene(${ref.name}), but ${count} scenes are named "${ref.name}". Rename one so the name is unique.`
+              : `${sceneOf(scene)}: the Ren'Py code block (${label}) mentions @scene(${ref.name}), but no scene has that name. Use the exact name of a scene.`,
+            sceneId: scene.id,
+            blockId: block.id
+          })
+        }
+        break
       default:
         break
     }
@@ -466,7 +490,69 @@ export function validateProject(project: Project): Problem[] {
           exitId: 'else'
         })
       }
+    } else if (e.type === 'code') {
+      const exitCounts = new Map<string, number>()
+      for (const x of e.exits) exitCounts.set(x.name, (exitCounts.get(x.name) ?? 0) + 1)
+      const written = new Set<string>()
+      for (const ref of findCodeRefs(e.code, 'exit', [...exitCounts.keys()])) {
+        if (ref.known) written.add(ref.name)
+        else {
+          add({
+            severity: 'error',
+            message: `${sceneOf(scene)}: the code of the ending uses @exit(${ref.name}), but the ending has no exit with that name. Add an exit called "${ref.name}" or fix the name.`,
+            sceneId: scene.id
+          })
+        }
+      }
+      const reported = new Set<string>()
+      for (const x of e.exits) {
+        const exitId = `x:${x.id}`
+        if (x.name.trim() === '') {
+          add({
+            severity: 'error',
+            message: `${sceneOf(scene)}: an exit of the code ending has no name. Give it a name, or delete it.`,
+            sceneId: scene.id,
+            exitId
+          })
+        } else if ((exitCounts.get(x.name) ?? 0) > 1) {
+          if (!reported.has(x.name)) {
+            reported.add(x.name)
+            add({
+              severity: 'error',
+              message: `${sceneOf(scene)}: two exits of the code ending are both called "${x.name}". Give each exit its own name.`,
+              sceneId: scene.id,
+              exitId
+            })
+          }
+        } else if (!written.has(x.name)) {
+          add({
+            severity: 'warning',
+            message: `${sceneOf(scene)}: the exit "${x.name}" is never used in the code of the ending, so nothing will follow its arrow. Use @exit(${x.name}) in the code or delete the exit.`,
+            sceneId: scene.id,
+            exitId
+          })
+        }
+        if (targetMissing(x.target)) {
+          add({
+            severity: 'error',
+            message: `${sceneOf(scene)}: the exit ${x.name.trim() === '' ? 'of the code ending' : `"${x.name}"`} doesn't lead anywhere. Drag its dot to a scene.`,
+            sceneId: scene.id,
+            exitId
+          })
+        }
+      }
+      if (e.exits.length === 0 && !mentionsLeaving(e.code)) {
+        add({
+          severity: 'warning',
+          message: `${sceneOf(scene)}: the code of the ending has no exits and no return or jump, so this scene might fall through into whatever comes next.`,
+          sceneId: scene.id
+        })
+      }
     }
+  }
+
+  for (const { file, message } of scriptFileProblems(project)) {
+    add({ severity: 'error', message: `The script file "${file.name.trim() === '' ? '(no name)' : file.name}" can't be exported: ${message}` })
   }
 
   const visits = new Map<Id, Id[]>()

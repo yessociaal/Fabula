@@ -69,7 +69,11 @@ function sameFile(from: string, to: string): boolean {
   }
 }
 
-const isProtected = (rel: string): boolean => PROTECTED.has(rel) || rel === 'gui' || rel.startsWith('gui/')
+/** Case-insensitive, because Windows treats Gui.rpy and gui.rpy as the same file. */
+const isProtected = (rel: string): boolean => {
+  const lower = rel.toLowerCase()
+  return PROTECTED.has(lower) || lower === 'gui' || lower.startsWith('gui/')
+}
 
 /** Replace the title in the single `define config.name = _("…")` line. Returns null when the line is not there. */
 export function setConfigName(optionsText: string, title: string): string | null {

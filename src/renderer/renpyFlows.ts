@@ -1,4 +1,6 @@
 import { cleanErrorMessage } from '@shared/ipc'
+import { parseLintReport } from '@shared/lintReport'
+import { storyHasCode } from '@shared/scriptFiles'
 import type { Id, Project } from '@shared/model'
 import { validateProject } from '@shared/validate'
 import { api } from './api'
@@ -7,6 +9,8 @@ import { joinPath, safeFolderName } from './pathUtil'
 import { flushAutosave } from './store/autosave'
 import { useProjectStore } from './store/projectStore'
 import { useUiStore } from './store/uiStore'
+
+export { storyHasCode }
 
 const ui = (): ReturnType<typeof useUiStore.getState> => useUiStore.getState()
 
@@ -51,6 +55,18 @@ async function exportNow(dir: string, project: Project): Promise<Record<Id, { fi
   return result.sceneLocations ?? {}
 }
 
+/**
+ * When the story has hand-written code (a code block, a code ending or a script file), let Ren'Py lint the freshly
+ * exported game. Nothing is shown when lint is clean; otherwise the lint report opens with the file and line of each problem.
+ */
+async function lintIfCode(renpyDir: string, project: Project): Promise<void> {
+  if (!storyHasCode(project)) return
+  ui().setBusy("Checking your code with Ren'Py lint…")
+  const result = await api.renpyLint(renpyDir)
+  const summary = parseLintReport(result.report)
+  if (!result.ok || !summary.ok) ui().setLintReport({ ok: false, report: result.report })
+}
+
 /** Save, validate, make sure a Ren'Py game is linked (asking to create one if not), then run `then` with the export done. */
 async function withExport(
   name: string,
@@ -75,7 +91,9 @@ async function withExport(
 export function playInRenpy(fromSceneId?: Id): void {
   void withExport(
     'Starting Ren\'Py…',
-    async ({ renpyDir, locations }) => {
+    async ({ renpyDir, locations, project }) => {
+      await lintIfCode(renpyDir, project)
+      ui().setBusy("Starting Ren'Py…")
       let warp: { file: string; line: number } | undefined
       if (fromSceneId !== undefined) {
         const at = locations[fromSceneId]
@@ -99,8 +117,9 @@ export function playInRenpy(fromSceneId?: Id): void {
 export function exportToRenpyFlow(): void {
   void withExport(
     'Exporting…',
-    async ({ renpyDir }) => {
+    async ({ renpyDir, project }) => {
       toast(`Exported to ${renpyDir}`, 'ok')
+      await lintIfCode(renpyDir, project)
     },
     () => exportToRenpyFlow()
   )

@@ -31,7 +31,8 @@ export const MORE_PALETTE: PaletteEntry[] = [
   { key: 'ask', type: 'ask', label: 'Ask the player' },
   { key: 'movie', type: 'movie', label: 'Movie' },
   { key: 'window', type: 'window', label: 'Text box show/hide' },
-  { key: 'clearPage', type: 'clearPage', label: 'Clear page' }
+  { key: 'clearPage', type: 'clearPage', label: 'Clear page' },
+  { key: 'code', type: 'code', label: "Ren'Py code" }
 ]
 
 export const ALL_PALETTE: PaletteEntry[] = [...PALETTE, ...MORE_PALETTE]

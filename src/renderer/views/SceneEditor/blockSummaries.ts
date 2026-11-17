@@ -1,5 +1,6 @@
 import type { Block, Effect, Id, Project, Scalar } from '@shared/model'
 import { conditionToWords } from '@shared/conditions'
+import { firstCodeLine } from '@shared/codeRefs'
 import { transitionLabel } from './editorHelpers'
 
 export interface BlockSummary {
@@ -111,6 +112,10 @@ export function summarizeBlock(block: Block, project: Project): BlockSummary {
       return { title: 'Text box', detail: block.action === 'show' ? 'Show' : 'Hide' }
     case 'clearPage':
       return { title: 'Clear page', detail: 'Start a fresh NVL page' }
+    case 'code': {
+      const first = firstCodeLine(block.code)
+      return { title: "Ren'Py code", detail: first === '' ? '(empty)' : oneLine(first, 50) }
+    }
     case 'visit': {
       const scene = block.sceneId === null ? undefined : project.scenes[block.sceneId]
       return { title: 'Visit scene', detail: scene ? `${scene.name || 'Untitled scene'} · then comes back here` : block.sceneId === null ? 'Pick a scene' : 'Missing scene' }

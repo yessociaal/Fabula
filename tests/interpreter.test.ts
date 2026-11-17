@@ -290,7 +290,7 @@ describe('interpreter', () => {
 
   it('skips extended blocks and ends with a notice on an extended ending', () => {
     const w = world()
-    const a = w.add('Start', [{ id: 'x', type: 'code', code: 'pass' }, say(null, 'after')], { type: 'code', code: '', exits: [] })
+    const a = w.add('Start', [{ id: 'x', type: 'code', code: 'pass' }, say(null, 'after')], { type: 'kit', kitId: 'k', endingType: 'e', params: {}, exits: [] })
     let s = start(w.p, a)
     expect(s.line?.text).toBe('after')
     s = advance(w.p, s)

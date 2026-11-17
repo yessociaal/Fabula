@@ -9,6 +9,7 @@ import { blockKindLabel } from '../blockMeta'
 import { AskInspector } from './AskInspector'
 import { BackgroundInspector } from './BackgroundInspector'
 import { ClearPageInspector } from './ClearPageInspector'
+import { CodeInspector } from './CodeInspector'
 import { DialogueInspector } from './DialogueInspector'
 import { HideInspector } from './HideInspector'
 import { IfInspector } from './IfInspector'
@@ -55,6 +56,8 @@ function Fields({ sceneId, block, path }: { sceneId: Id; block: Block; path: Blo
       return <WindowInspector {...p} block={block} />
     case 'clearPage':
       return <ClearPageInspector {...p} block={block} />
+    case 'code':
+      return <CodeInspector {...p} block={block} />
     case 'visit':
       return <VisitInspector {...p} block={block} />
     case 'if':

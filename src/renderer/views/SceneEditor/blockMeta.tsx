@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import {
   Bell,
+  CodeXml,
   CornerDownRight,
   GitBranch,
   ListTree,
@@ -57,6 +58,8 @@ export function iconFor(type: string, narration: boolean, size = 16): ReactNode 
       return <PanelBottom size={size} />
     case 'clearPage':
       return <Eraser size={size} />
+    case 'code':
+      return <CodeXml size={size} />
     case 'visit':
       return <CornerDownRight size={size} />
     case 'if':
@@ -99,6 +102,8 @@ export function blockKindLabel(block: Block): string {
       return 'Text box show/hide'
     case 'clearPage':
       return 'Clear page'
+    case 'code':
+      return "Ren'Py code"
     case 'visit':
       return 'Visit scene'
     case 'if':

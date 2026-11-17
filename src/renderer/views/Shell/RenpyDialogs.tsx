@@ -73,6 +73,13 @@ export function RenpyDialogs() {
                 ? `Ren'Py found ${summary.problems.length === 1 ? '1 problem' : `${summary.problems.length} problems`}.`
                 : "Ren'Py could not check the game."}
           </p>
+          {summary.problems.length > 0 && (
+            <ul className="lint-problems" aria-label="Problems found by lint">
+              {summary.problems.map((line, i) => (
+                <li key={i}>{line}</li>
+              ))}
+            </ul>
+          )}
           <pre className="report-text">{lintReport.report}</pre>
         </Modal>
       )}

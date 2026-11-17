@@ -11,6 +11,7 @@ import { IconButton } from '../../components/IconButton'
 import { Modal } from '../../components/Modal'
 import { toast } from '../../components/Toast'
 import { playInRenpy } from '../../renpyFlows'
+import { ViewScriptModal } from './ViewScriptModal'
 import { useProjectStore } from '../../store/projectStore'
 import { useUiStore } from '../../store/uiStore'
 import { plural } from '../../util'
@@ -21,6 +22,7 @@ export function SceneBar({ scene }: { scene: Scene }) {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [locking, setLocking] = useState(false)
+  const [viewing, setViewing] = useState(false)
   const S = useProjectStore.getState
   const setView = useUiStore((s) => s.setView)
   const busy = useUiStore((s) => s.busy)
@@ -81,6 +83,11 @@ export function SceneBar({ scene }: { scene: Scene }) {
       disabled: isStart,
       onSelect: () => setLocking(true)
     },
+    {
+      label: 'View script',
+      title: 'Show exactly what this scene is exported as (read-only)',
+      onSelect: () => setViewing(true)
+    },
     { separator: true },
     { label: 'Delete', danger: true, onSelect: () => setConfirmDelete(true) }
   ]
@@ -115,6 +122,7 @@ export function SceneBar({ scene }: { scene: Scene }) {
         <MoreHorizontal size={18} />
       </IconButton>
       {menu && <ContextMenu x={menu.x} y={menu.y} items={items} onClose={() => setMenu(null)} />}
+      {viewing && <ViewScriptModal scene={scene} onClose={() => setViewing(false)} />}
       {locking && <LockLabelModal scene={scene} onClose={() => setLocking(false)} />}
       {confirmDelete && (
         <Modal

@@ -335,10 +335,10 @@ describe('defensive rules and extended features', () => {
     expect(startBody(k, [block('show', { characterId: k.anna, expressionId: noImage.id })])).toEqual(['    return'])
   })
 
-  it('extended blocks and endings are skipped without crashing', () => {
+  it('extended blocks and endings are skipped without crashing (an empty code block emits nothing)', () => {
     const k = kit()
     const extra = [
-      { id: 'x1', type: 'code', code: 'x = 1' },
+      { id: 'x1', type: 'code', code: '' },
       { id: 'x2', type: 'visit', sceneId: null },
       { id: 'x3', type: 'screen', action: 'show', screenId: null }
     ] as unknown as Block[]
@@ -462,10 +462,10 @@ describe('golden files and global rules', () => {
   })
 
   it('writes exactly the golden files', () => {
-    expect(result.files.map((f) => f.path)).toEqual(['script.rpy', 'act_one.rpy', 'act_two.rpy'])
+    expect(result.files.map((f) => f.path)).toEqual(['script.rpy', 'act_one.rpy', 'act_two.rpy', 'extras.rpy'])
   })
 
-  for (const name of ['script.rpy', 'act_one.rpy', 'act_two.rpy']) {
+  for (const name of ['script.rpy', 'act_one.rpy', 'act_two.rpy', 'extras.rpy']) {
     it(`${name} matches the golden file byte for byte`, () => {
       const expected = readFileSync(goldenPath(name), 'utf8')
       expect(result.files.find((f) => f.path === name)?.content).toBe(expected)

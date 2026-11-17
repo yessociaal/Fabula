@@ -606,3 +606,71 @@
   flex: 1;
   min-width: 0;
 }
+
+/* Code escape hatches */
+
+.code-area,
+.script-editor-text {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre;
+  overflow: auto;
+  tab-size: 4;
+  resize: vertical;
+}
+
+.more-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.more-toggle:hover {
+  color: var(--text);
+}
+
+.ending-more {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.code-exits-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.code-insert {
+  width: 180px;
+}
+
+.exit-row-edit {
+  align-items: center;
+}
+
+.exit-row-edit .exit-name {
+  width: 160px;
+  flex: none;
+}
+
+.muted-note code,
+.modal-text code {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 12px;
+}
+
+.view-script {
+  max-height: 55vh;
+  overflow: auto;
+  white-space: pre;
+  user-select: text;
+}

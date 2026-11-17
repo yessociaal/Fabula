@@ -1,5 +1,6 @@
 import type { Id, Project, Scene } from '../model'
 import { buildNameTable, sceneOrder } from '../naming'
+import { scriptFilePath, usableScriptFiles } from '../scriptFiles'
 import type { AssetCopy } from './assets'
 import { lookupAsset, sidePath } from './assets'
 import { emitBlocks, indentLines } from './blocks'
@@ -101,6 +102,9 @@ export function compileProject(project: Project): CompileResult {
     })
     files.push({ path: group.file, content: content === '' ? '' : `${content}\n` })
   }
+
+  // Script files the author wrote: each goes out exactly as typed, under its own name.
+  for (const file of usableScriptFiles(project)) files.push({ path: scriptFilePath(file.name), content: file.content })
 
   const assetCopies = [...ctx.copies.values()].sort((a, b) => (a.to < b.to ? -1 : a.to > b.to ? 1 : 0))
   return { files, assetCopies, sceneLocations }

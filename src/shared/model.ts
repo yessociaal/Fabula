@@ -247,7 +247,9 @@ export type ScreenElement =
 
 export type CoreBlockType = CoreBlock['type']
 export type CoreEndingType = CoreEnding['type']
+/** Ending types the Ending panel can switch to: the four core ones and the Ren'Py code ending. */
+export type SwitchableEndingType = CoreEndingType | 'code'
 
 /** Extra block types the palette can create (the rest of ExtraBlock arrives in later phases). */
-export type NewExtraBlockType = 'ask' | 'movie' | 'window' | 'clearPage' | 'visit' | 'if' | 'inlineChoice'
+export type NewExtraBlockType = 'ask' | 'movie' | 'window' | 'clearPage' | 'visit' | 'if' | 'inlineChoice' | 'code'
 export type CreatableBlockType = CoreBlockType | NewExtraBlockType

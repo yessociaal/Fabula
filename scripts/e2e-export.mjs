@@ -112,10 +112,15 @@ async function main() {
       ['a persistent variable', 'default persistent.seen_ending = False'],
       ['a sub-scene call', '    call cellar\n'],
       ['a call nested in an If inside a Choice option', '            if has_key:\n                call cellar\n            else:\n'],
-      ['an empty Choice option', '        "Leave" if courage >= 1:\n            pass\n']
+      ['an empty Choice option', '        "Leave" if courage >= 1:\n            pass\n'],
+      ['a code block, verbatim (blank line, trailing spaces, @scene replaced)', '    $ x = 1\n\n    $ total = x + 2   \n    $ target_label = "cellar"\n    show screen demo_overlay\n'],
+      ['a code ending with its two exits replaced by labels', '    if courage > 0:\n        jump left_path\n    else:\n        jump the_end\n']
     ]) {
       check(script.includes(needle), `the exported script contains ${what}`)
     }
+    const extrasFile = join(gameDir, 'game', 'extras.rpy')
+    check(existsSync(extrasFile) && readFileSync(extrasFile, 'utf8') === project.scriptFiles[0].content, 'the script file extras.rpy was written byte for byte')
+    check(manifest.files.includes('extras.rpy'), 'the script file is listed in the export manifest')
     check(
       existsSync(join(gameDir, 'game', 'images', 'characters', 'side nova.png')) && existsSync(join(gameDir, 'game', 'movies', 'intro.webm')),
       'the side image and the movie file were copied into the game'
@@ -166,7 +171,9 @@ async function main() {
     // 6b. warp into the scene that visits a sub-scene, then into the sub-scene itself; each must stay up 10 s with no error files
     for (const [id, what] of [
       ['s_tour', 'the scene that visits a sub-scene (twice, once inside an If inside a Choice option)'],
-      ['s_cellar', 'the sub-scene itself']
+      ['s_cellar', 'the sub-scene itself'],
+      ['s_code', 'the scene with the code block (it shows the screen from the script file)'],
+      ['s_fork', 'the scene with the code ending (two named exits)']
     ]) {
       const loc = second.sceneLocations[id]
       const w = { file: loc.file, line: loc.line + 1 }

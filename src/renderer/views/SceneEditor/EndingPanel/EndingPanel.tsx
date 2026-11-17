@@ -1,9 +1,11 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { CoreEndingType, Id, Scene } from '@shared/model'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { validateProject } from '@shared/validate'
 import { useProjectStore } from '../../../store/projectStore'
 import type { RowProblem } from '../BlockRow'
 import { BranchEnding } from './BranchEnding'
+import { CodeEnding } from './CodeEnding'
 import { ChoiceEnding } from './ChoiceEnding'
 import { EndEnding } from './EndEnding'
 import { JumpEnding } from './JumpEnding'
@@ -34,6 +36,8 @@ export function EndingPanel({ scene }: { scene: Scene }) {
   const setEndingType = useProjectStore((s) => s.setEndingType)
   const problems = useExitProblems(scene.id)
   const e = scene.ending
+  const [moreOpen, setMoreOpen] = useState(false)
+  const showMore = moreOpen || e.type === 'code'
 
   return (
     <section className="ending-panel" aria-label="Ending">
@@ -53,12 +57,39 @@ export function EndingPanel({ scene }: { scene: Scene }) {
             </button>
           ))}
         </div>
+        <button
+          type="button"
+          className="more-toggle"
+          aria-expanded={showMore}
+          title="More ways to end a scene"
+          onClick={() => setMoreOpen(!showMore)}
+        >
+          {showMore ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          More
+        </button>
       </div>
+      {showMore && (
+        <div className="ending-more" aria-label="More endings">
+          <div className="seg" role="radiogroup" aria-label="More ways this scene can end">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={e.type === 'code'}
+              className={e.type === 'code' ? 'active' : ''}
+              title="Write the ending yourself in Ren'Py code; each named exit is an arrow on the map"
+              onClick={() => setEndingType(scene.id, 'code')}
+            >
+              Ren'Py code
+            </button>
+          </div>
+        </div>
+      )}
       {e.type === 'choice' && <ChoiceEnding sceneId={scene.id} ending={e} problems={problems} />}
       {e.type === 'jump' && <JumpEnding sceneId={scene.id} ending={e} problems={problems} />}
       {e.type === 'branch' && <BranchEnding sceneId={scene.id} ending={e} problems={problems} />}
       {e.type === 'end' && <EndEnding />}
-      {!['choice', 'jump', 'branch', 'end'].includes(e.type) && (
+      {e.type === 'code' && <CodeEnding sceneId={scene.id} ending={e} problems={problems} />}
+      {!['choice', 'jump', 'branch', 'end', 'code'].includes(e.type) && (
         <p className="muted-note">This kind of ending cannot be edited here yet.</p>
       )}
     </section>

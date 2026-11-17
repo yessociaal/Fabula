@@ -14,6 +14,7 @@ import type {
   Expression,
   Id,
   InlineChoiceOption,
+  NamedExit,
   Project,
   Scalar,
   Scene,
@@ -105,7 +106,13 @@ export function createBlock(type: CreatableBlockType): Block {
       return { id, type, condition: createCondition(), then: [], otherwise: [] }
     case 'inlineChoice':
       return { id, type, prompt: null, options: [createInlineOption(), createInlineOption()] }
+    case 'code':
+      return { id, type, code: '' }
   }
+}
+
+export function createNamedExit(name: string, target: Id | null = null): NamedExit {
+  return { id: newId(), name, target }
 }
 
 export function createInlineOption(text = ''): InlineChoiceOption {

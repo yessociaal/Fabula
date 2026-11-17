@@ -45,6 +45,11 @@ const short = (text: string, max = 28): string => {
   return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat
 }
 
+/**
+ * Where assets, characters and variables are used. Text typed into Ren'Py code blocks, code endings and script files
+ * is NOT scanned: a variable or file that only your own code mentions still shows as unused. This is deliberate,
+ * because Fabula never reads inside code you wrote.
+ */
 export function findUsage(project: Project): UsageIndex {
   const index: UsageIndex = { assets: {}, characters: {}, variables: {} }
   const add = (map: Record<Id, UsageRef[]>, id: Id | null | undefined, ref: UsageRef): void => {

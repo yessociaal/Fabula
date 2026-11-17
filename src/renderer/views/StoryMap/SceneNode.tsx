@@ -141,6 +141,11 @@ function SceneNodeView({ data, selected }: NodeProps<SceneFlowNode>) {
       <div className="scene-line">{info.firstLine || <span className="muted">No dialogue yet</span>}</div>
       <div className="scene-meta">{plural(info.blockCount, 'block')}</div>
       <div className="scene-exits">
+        {info.codeEnding && (
+          <div className="exit-row code-row" title="This scene ends with Ren'Py code">
+            <span className="exit-text">&lt;/&gt; Ren'Py code</span>
+          </div>
+        )}
         {info.isEnd ? (
           <div className="exit-row end-row">
             <span className="exit-text">■ END</span>

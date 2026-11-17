@@ -167,7 +167,7 @@ label cellar_tour:
 
     "Back above ground."
 
-    jump the_end
+    jump code_room
 
 
 label cellar:
@@ -184,3 +184,28 @@ label splashscreen:
     "Presented with care."
 
     return
+
+
+label code_room:
+
+    "A code block follows."
+
+    $ x = 1
+
+    $ total = x + 2   
+    $ target_label = "cellar"
+    show screen demo_overlay
+
+    "The overlay is on screen."
+
+    jump fork
+
+
+label fork:
+
+    "Left or right?"
+
+    if courage > 0:
+        jump left_path
+    else:
+        jump the_end

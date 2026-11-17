@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, ChevronRight, PanelRightClose, PanelRightOpen, Pencil, RotateCcw } from 'lucide-react'
 import type { Id, Project } from '@shared/model'
-import { start, step, type PlayInput, type PlayState } from '@shared/interpreter'
+import { CODE_BLOCK_NOTICE, CODE_ENDING_NOTICE, CODE_ENDING_TITLE, start, step, type PlayInput, type PlayState } from '@shared/interpreter'
 import { buildNameTable } from '@shared/naming'
 import { dialogueFor, variableResolver } from '@shared/stageView'
 import { api } from '../../api'
@@ -156,9 +156,15 @@ function Run({ project, dir, fromSceneId, onRestart }: { project: Project; dir: 
         e.preventDefault()
         close()
       } else if (e.key === ' ' || e.key === 'Enter') {
-        if (s.menu) return
+        if (s.menu || s.codeExits) return
         e.preventDefault()
         send({ type: 'advance' })
+      } else if (/^[1-9]$/.test(e.key) && s.codeExits) {
+        const exit = s.codeExits[Number(e.key) - 1]
+        if (exit) {
+          e.preventDefault()
+          send({ type: 'exit', exitId: exit.id })
+        }
       } else if (/^[1-9]$/.test(e.key) && s.menu) {
         const option = s.menu[Number(e.key) - 1]
         if (option) {
@@ -175,7 +181,7 @@ function Run({ project, dir, fromSceneId, onRestart }: { project: Project; dir: 
   const sceneName = state.sceneId ? (project.scenes[state.sceneId]?.name ?? '') : ''
   const dialogue = state.line ? dialogueFor(project, state.line.characterId, state.line.text) : null
   const waitingForClick =
-    state.status === 'running' && !state.menu && !state.ask && (state.line !== null || state.movie !== null || (state.pause !== null && state.pause.seconds === null))
+    state.status === 'running' && !state.menu && !state.codeExits && !state.ask && (state.line !== null || state.movie !== null || (state.pause !== null && state.pause.seconds === null))
   const refs = useMemo(() => buildNameTable(project).variableRefs, [project])
 
   return (
@@ -225,6 +231,19 @@ function Run({ project, dir, fromSceneId, onRestart }: { project: Project; dir: 
             onAnswer={(text) => send({ type: 'answer', text })}
             fade
           />
+          {state.status === 'running' && state.codeExits && (
+            <div className="playtest-code-ending" role="group" aria-label={CODE_ENDING_TITLE}>
+              <h2>{CODE_ENDING_TITLE}</h2>
+              <p className="playtest-notice">{CODE_ENDING_NOTICE}</p>
+              <div className="playtest-code-exits">
+                {state.codeExits.map((x) => (
+                  <Button key={x.id} variant="primary" onClick={() => send({ type: 'exit', exitId: x.id })}>
+                    {x.text}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
           {waitingForClick && <div className="playtest-hint">Click, Space or Enter to continue</div>}
           {state.status === 'ended' && (
             <div className="playtest-end" role="status">
@@ -258,6 +277,14 @@ function Run({ project, dir, fromSceneId, onRestart }: { project: Project; dir: 
                 ))}
               </p>
             </section>
+            {state.skippedCode && (
+              <section>
+                <h3>Ren'Py code</h3>
+                <p className="playtest-notice" data-testid="code-notice">
+                  {CODE_BLOCK_NOTICE}
+                </p>
+              </section>
+            )}
             <section>
               <h3>Variables</h3>
               {project.variableOrder.length === 0 ? (

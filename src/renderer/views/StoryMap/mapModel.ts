@@ -11,6 +11,8 @@ export interface ExitRowInfo {
   ifTag: boolean
   /** The exit has no target yet: its dot is red. */
   unset: boolean
+  /** A named exit of a code (or kit) ending: the text is the exit's name. */
+  named?: true
 }
 
 export interface SceneCardInfo {
@@ -21,6 +23,8 @@ export interface SceneCardInfo {
   /** One row per exit; empty for an End scene (the card then shows "END" and has no handle). */
   exits: ExitRowInfo[]
   isEnd: boolean
+  /** The scene ends with Ren'Py code: the card says so above its named exits. */
+  codeEnding?: true
 }
 
 export const ARROW_LABEL_MAX = 24
@@ -36,11 +40,12 @@ export function buildExitRows(scene: Scene, project: Project): ExitRowInfo[] {
   return listExits(scene, project).map((x) => {
     let text = x.label
     if (x.kind === 'option') text = x.label.trim() === '' ? 'Untitled choice' : x.label
+    else if (x.kind === 'named') text = x.label.trim() === '' ? 'Untitled exit' : x.label
     else if (x.kind === 'case' && e.type === 'branch') {
       const c = e.cases.find((k) => `case:${k.id}` === x.handleId)
       text = c ? conditionToWords(c.condition, varName) : x.label
     }
-    return { handleId: x.handleId, text, ifTag: x.kind === 'option' && x.conditional, unset: x.target === null }
+    return { handleId: x.handleId, text, ifTag: x.kind === 'option' && x.conditional, unset: x.target === null, ...(x.kind === 'named' ? { named: true as const } : {}) }
   })
 }
 
@@ -61,7 +66,7 @@ export function sceneCardInfo(scene: Scene, project: Project): SceneCardInfo {
     }
   })
   const exits = buildExitRows(scene, project)
-  return { backgroundAssetId, firstLine, blockCount: countBlocks(scene.blocks), exits, isEnd: scene.ending.type === 'end' }
+  return { backgroundAssetId, firstLine, blockCount: countBlocks(scene.blocks), exits, isEnd: scene.ending.type === 'end', ...(scene.ending.type === 'code' ? { codeEnding: true as const } : {}) }
 }
 
 /** Case-insensitive match on the scene name and on every dialogue line. An empty query matches nothing. */

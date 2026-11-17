@@ -10,7 +10,7 @@ import type {
   ChoiceOption,
   Condition,
   CreatableBlockType,
-  CoreEndingType,
+  SwitchableEndingType,
   Effect,
   Ending,
   Expression,
@@ -26,11 +26,14 @@ import {
   createChapter,
   createCharacter,
   createExpression,
+  createNamedExit,
   createOption,
   createScene,
   createVariable,
-  defaultValueFor
+  defaultValueFor,
+  newId
 } from '@shared/factory'
+import { nextScriptFileName, scriptFileNameProblem } from '@shared/scriptFiles'
 import { listExits, setExitTarget as setExitTargetOn } from '@shared/edges'
 import {
   DEPTH_ERROR,
@@ -45,6 +48,9 @@ import {
   walkBlocks,
   type BlockPath
 } from '@shared/blockTree'
+
+/** What a script file action reports: the file's id, or the reason it was refused (shown as a message next to the name). */
+export type ScriptFileResult = { ok: true; id: Id } | { ok: false; error: string }
 
 /** What a block action reports: the new block's id (when there is one), or a message the UI shows as a toast. */
 export type BlockResult = { ok: true; id: Id | null } | { ok: false; error: string }
@@ -100,7 +106,17 @@ export interface ProjectState {
   duplicateBlock(sceneId: Id, blockId: Id): Id | null
 
   setEnding(sceneId: Id, ending: Ending): void
-  setEndingType(sceneId: Id, type: CoreEndingType): void
+  /**
+   * Switch how a scene ends. The first exit that has a target is kept: jump -> code makes one exit called "next" with the old target
+   * (and starts the code with `jump @exit(next)`); code -> anything else keeps the first exit's target.
+   */
+  setEndingType(sceneId: Id, type: SwitchableEndingType): void
+  /** The text of a code ending, stored exactly as typed. */
+  setEndingCode(sceneId: Id, code: string): void
+  /** Add a named exit to a code ending (a free name like "exit_2"). Returns its id. */
+  addExit(sceneId: Id): Id | null
+  updateExit(sceneId: Id, exitId: Id, patch: { name?: string }): void
+  deleteExit(sceneId: Id, exitId: Id): void
   addOption(sceneId: Id): Id | null
   updateOption(sceneId: Id, optionId: Id, patch: Patch<ChoiceOption>): void
   moveOption(sceneId: Id, from: number, to: number): void
@@ -128,6 +144,13 @@ export interface ProjectState {
   /** Swap the file behind an asset while keeping its id (and so every place that uses it). */
   replaceAssetFile(assetId: Id, patch: Pick<Asset, 'file' | 'width' | 'height' | 'bytes'>): void
   deleteAsset(assetId: Id): void
+
+  /** Script files: extra .rpy files written by hand and exported unchanged. A name that is not allowed is refused with the reason. */
+  addScriptFile(name?: string, content?: string): ScriptFileResult
+  renameScriptFile(fileId: Id, name: string): ScriptFileResult
+  /** The text is stored exactly as typed. */
+  updateScriptFile(fileId: Id, content: string): void
+  deleteScriptFile(fileId: Id): void
 
   addChapter(name?: string, color?: string): Id
   updateChapter(chapterId: Id, patch: Patch<Chapter>): void
@@ -421,7 +444,47 @@ export const useProjectStore = create<ProjectState>()(
               case 'end':
                 s.ending = { type: 'end' }
                 break
+              case 'code': {
+                const fromJump = s.ending.type === 'jump'
+                if (fromJump || target !== null) {
+                  s.ending = { type: 'code', code: 'jump @exit(next)', exits: [createNamedExit('next', target)] }
+                } else {
+                  s.ending = { type: 'code', code: '', exits: [] }
+                }
+                break
+              }
             }
+          })
+        },
+        setEndingCode(sceneId, code) {
+          mutateScene(sceneId, (s) => {
+            if (s.ending.type === 'code') s.ending.code = code
+          })
+        },
+        addExit(sceneId) {
+          let id: Id | null = null
+          mutateScene(sceneId, (s) => {
+            if (s.ending.type !== 'code') return
+            const taken = new Set(s.ending.exits.map((x) => x.name))
+            let n = s.ending.exits.length + 1
+            while (taken.has(`exit_${n}`)) n++
+            const exit = createNamedExit(`exit_${n}`)
+            s.ending.exits.push(exit)
+            id = exit.id
+          })
+          return id
+        },
+        updateExit(sceneId, exitId, patch) {
+          mutateScene(sceneId, (s) => {
+            if (s.ending.type !== 'code') return
+            const x = s.ending.exits.find((e) => e.id === exitId)
+            if (x && patch.name !== undefined) x.name = patch.name
+          })
+        },
+        deleteExit(sceneId, exitId) {
+          mutateScene(sceneId, (s) => {
+            if (s.ending.type !== 'code') return
+            s.ending.exits = s.ending.exits.filter((e) => e.id !== exitId)
           })
         },
         addOption(sceneId) {
@@ -665,6 +728,43 @@ export const useProjectStore = create<ProjectState>()(
               }
             }
             delete p.assets[assetId]
+          })
+        },
+
+        // ----- script files -----
+        addScriptFile(name, content = '') {
+          const project = get().project
+          if (!project) return { ok: false, error: 'No story is open.' }
+          const wanted = name === undefined ? nextScriptFileName(project) : name.trim()
+          const problem = scriptFileNameProblem(project, wanted)
+          if (problem !== null) return { ok: false, error: problem }
+          const id = newId()
+          mutate((p) => {
+            p.scriptFiles.push({ id, name: wanted, content })
+          })
+          return { ok: true, id }
+        },
+        renameScriptFile(fileId, name) {
+          const project = get().project
+          if (!project || !project.scriptFiles.some((f) => f.id === fileId)) return { ok: false, error: 'That file no longer exists.' }
+          const wanted = name.trim()
+          const problem = scriptFileNameProblem(project, wanted, fileId)
+          if (problem !== null) return { ok: false, error: problem }
+          mutate((p) => {
+            const f = p.scriptFiles.find((x) => x.id === fileId)
+            if (f) f.name = wanted
+          })
+          return { ok: true, id: fileId }
+        },
+        updateScriptFile(fileId, content) {
+          mutate((p) => {
+            const f = p.scriptFiles.find((x) => x.id === fileId)
+            if (f) f.content = content
+          })
+        },
+        deleteScriptFile(fileId) {
+          mutate((p) => {
+            p.scriptFiles = p.scriptFiles.filter((f) => f.id !== fileId)
           })
         },
 

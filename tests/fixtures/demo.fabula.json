@@ -922,7 +922,81 @@
       ],
       "ending": {
         "type": "jump",
-        "target": "s_end"
+        "target": "s_code"
+      },
+      "labelLock": null,
+      "role": "normal"
+    },
+    "s_code": {
+      "id": "s_code",
+      "name": "Code room",
+      "notes": "",
+      "position": {
+        "x": 0,
+        "y": 700
+      },
+      "chapterId": null,
+      "blocks": [
+        {
+          "id": "cd01",
+          "type": "say",
+          "characterId": null,
+          "text": "A code block follows.",
+          "voiceAssetId": null
+        },
+        {
+          "id": "cd02",
+          "type": "code",
+          "code": "$ x = 1\n\n$ total = x + 2   \n$ target_label = \"@scene(Cellar)\"\nshow screen demo_overlay"
+        },
+        {
+          "id": "cd03",
+          "type": "say",
+          "characterId": null,
+          "text": "The overlay is on screen.",
+          "voiceAssetId": null
+        }
+      ],
+      "ending": {
+        "type": "jump",
+        "target": "s_fork"
+      },
+      "labelLock": null,
+      "role": "normal"
+    },
+    "s_fork": {
+      "id": "s_fork",
+      "name": "Fork",
+      "notes": "",
+      "position": {
+        "x": 0,
+        "y": 720
+      },
+      "chapterId": null,
+      "blocks": [
+        {
+          "id": "fk01",
+          "type": "say",
+          "characterId": null,
+          "text": "Left or right?",
+          "voiceAssetId": null
+        }
+      ],
+      "ending": {
+        "type": "code",
+        "code": "if courage > 0:\n    jump @exit(left)\nelse:\n    jump @exit(right)",
+        "exits": [
+          {
+            "id": "xl",
+            "name": "left",
+            "target": "s_left"
+          },
+          {
+            "id": "xr",
+            "name": "right",
+            "target": "s_end"
+          }
+        ]
       },
       "labelLock": null,
       "role": "normal"
@@ -1219,7 +1293,13 @@
   },
   "screens": {},
   "screenOrder": [],
-  "scriptFiles": [],
+  "scriptFiles": [
+    {
+      "id": "sf_extras",
+      "name": "extras",
+      "content": "screen demo_overlay():\n\n    frame:\n        xalign 0.98\n        yalign 0.02\n        text \"Overlay from a script file\"\n"
+    }
+  ],
   "kits": [],
   "look": {}
 }

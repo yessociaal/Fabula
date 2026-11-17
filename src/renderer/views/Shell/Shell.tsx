@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   ChevronDown,
   Download,
+  FileCode,
   Home as HomeIcon,
   Map as MapIcon,
   Play,
@@ -30,6 +31,7 @@ import Characters from '../Characters/Characters'
 import SceneEditor from '../SceneEditor/SceneEditor'
 import StoryMap from '../StoryMap/StoryMap'
 import Variables from '../Variables/Variables'
+import ScriptFiles from '../ScriptFiles/ScriptFiles'
 import { ProblemsDrawer } from '../Problems/ProblemsDrawer'
 import Settings from '../Settings/Settings'
 import { RenpyDialogs } from './RenpyDialogs'
@@ -39,6 +41,7 @@ const RAIL: { view: View; label: string; icon: ReactNode; empty: string }[] = [
   { view: 'characters', label: 'Characters', icon: <Users size={20} />, empty: 'The characters view arrives in a later step.' },
   { view: 'assets', label: 'Assets', icon: <ImageIcon size={20} />, empty: 'The assets view arrives in a later step.' },
   { view: 'variables', label: 'Variables', icon: <Sigma size={20} />, empty: 'The variables view arrives in a later step.' },
+  { view: 'scripts', label: 'Script files', icon: <FileCode size={20} />, empty: 'The script files view arrives in a later step.' },
   { view: 'settings', label: 'Settings', icon: <SettingsIcon size={20} />, empty: 'The settings view arrives in a later step.' }
 ]
 
@@ -213,6 +216,8 @@ export default function Shell() {
             <StoryMap />
           ) : view === 'scene' ? (
             <SceneEditor />
+          ) : view === 'scripts' ? (
+            <ScriptFiles />
           ) : view === 'settings' ? (
             <Settings />
           ) : (

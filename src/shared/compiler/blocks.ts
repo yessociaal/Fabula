@@ -1,4 +1,5 @@
 import type { Block, Condition, Effect, Id, Project, Transition } from '../model'
+import { replaceCodeRefs } from '../codeRefs'
 import { conditionToPython } from '../conditions'
 import type { NameTable } from '../naming'
 import { audioPath, backgroundPath, lookupAsset, moviePath, spritePath } from './assets'
@@ -54,6 +55,19 @@ export function emitEffect(effect: Effect, ctx: CompileContext): string | null {
       if (typeof effect.value !== 'number') return null
       return `$ ${name} ${effect.op === 'add' ? '+=' : '-='} ${pythonValue(effect.value)}`
   }
+}
+
+/**
+ * Code the author typed, with `@scene(Scene name)` replaced by that scene's label. Only a name that exactly one scene has
+ * is replaced; anything else stays as typed (the validator blocks the export first). Nothing else is touched.
+ */
+export function substituteSceneRefs(code: string, ctx: CompileContext): string {
+  const byName = new Map<string, Id[]>()
+  for (const scene of Object.values(ctx.project.scenes)) byName.set(scene.name, [...(byName.get(scene.name) ?? []), scene.id])
+  return replaceCodeRefs(code, 'scene', [...byName.keys()], (name) => {
+    const ids = byName.get(name)
+    return ids !== undefined && ids.length === 1 ? (ctx.names.sceneLabels[ids[0]] ?? null) : null
+  })
 }
 
 export const INDENT = '    '
@@ -216,6 +230,8 @@ export function emitBlock(block: Block, ctx: CompileContext): string | null {
       }
       return ['menu:', ...items].join('\n\n')
     }
+    case 'code':
+      return block.code.trim() === '' ? null : substituteSceneRefs(block.code, ctx)
     default:
       return null
   }
