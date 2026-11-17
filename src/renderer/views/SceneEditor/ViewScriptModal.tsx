@@ -1,4 +1,5 @@
 import { useMemo, useRef } from 'react'
+import { useKitStore } from '../../store/kitStore'
 import { Copy } from 'lucide-react'
 import { compileProject } from '@shared/compiler'
 import { sceneScriptFrom } from '@shared/compiler/sceneScript'
@@ -11,8 +12,9 @@ import { useProjectStore } from '../../store/projectStore'
 /** Read-only view of exactly what a scene compiles to, with a Copy button. */
 export function ViewScriptModal({ scene, onClose }: { scene: Scene; onClose: () => void }) {
   const project = useProjectStore((s) => s.project)
+  const kits = useKitStore((s) => s.kits)
   const pre = useRef<HTMLPreElement>(null)
-  const script = useMemo(() => (project ? sceneScriptFrom(compileProject(project), scene.id) : null), [project, scene.id])
+  const script = useMemo(() => (project ? sceneScriptFrom(compileProject(project, { kits }), scene.id) : null), [project, scene.id, kits])
 
   const selectAll = (): void => {
     const el = pre.current

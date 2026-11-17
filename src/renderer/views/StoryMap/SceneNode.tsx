@@ -5,6 +5,8 @@ import { visitTargets } from '@shared/blockTree'
 import type { Id } from '@shared/model'
 import { AssetThumb } from '../../components/AssetThumb'
 import { plural } from '../../util'
+import { KitIcon } from '../../components/KitIcon'
+import { useKitStore } from '../../store/kitStore'
 import { useProjectStore } from '../../store/projectStore'
 import { ExitRow } from './ExitRow'
 import { sceneCardInfo } from './mapModel'
@@ -63,6 +65,7 @@ function SceneNodeView({ data, selected }: NodeProps<SceneFlowNode>) {
   const characters = useProjectStore((s) => s.project?.characters)
   const variables = useProjectStore((s) => s.project?.variables)
   const screens = useProjectStore((s) => s.project?.screens)
+  const kits = useKitStore((s) => s.kits)
   const isStart = useProjectStore((s) => s.project?.startSceneId === sceneId)
   const chapterColor = useProjectStore((s) => {
     const chapterId = s.project?.scenes[sceneId]?.chapterId
@@ -80,9 +83,9 @@ function SceneNodeView({ data, selected }: NodeProps<SceneFlowNode>) {
   // The card text depends on the scene plus the characters, variables and screens it refers to.
   const info = useMemo(() => {
     const project = useProjectStore.getState().project
-    return scene && project ? sceneCardInfo(scene, project) : null
+    return scene && project ? sceneCardInfo(scene, project, { kits }) : null
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scene, characters, variables, screens])
+  }, [scene, characters, variables, screens, kits])
 
   const hasVisits = useMemo(() => (scene ? visitTargets(scene.blocks).length > 0 : false), [scene])
   const handleKey = info ? info.exits.map((r) => r.handleId).join('|') : ''
@@ -144,6 +147,13 @@ function SceneNodeView({ data, selected }: NodeProps<SceneFlowNode>) {
         {info.codeEnding && (
           <div className="exit-row code-row" title="This scene ends with Ren'Py code">
             <span className="exit-text">&lt;/&gt; Ren'Py code</span>
+          </div>
+        )}
+        {info.kitEnding && (
+          <div className="exit-row code-row" title={info.kitEnding.name}>
+            <span className="exit-text">
+              <KitIcon name={info.kitEnding.icon} size={12} /> {info.kitEnding.name}
+            </span>
           </div>
         )}
         {info.isEnd ? (

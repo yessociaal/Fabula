@@ -1,4 +1,5 @@
 import type { Asset, Id, Project } from './model'
+import type { LoadedKit } from './kits/types'
 import type { Problem } from './validate'
 
 export interface RecentEntry {
@@ -59,6 +60,8 @@ export interface Api {
   renpyLint(projectDir: string): Promise<{ ok: boolean; report: string }>
   renpyDistribute(projectDir: string, destDir: string): Promise<RunResult>
   revealInExplorer(path: string): Promise<void>
+  /** The kits available to a story: the built-in ones plus the ones in <editorProject>/kits. A kit that cannot be read comes back with its error. */
+  listKits(dir: string): Promise<LoadedKit[]>
   /** Not in the original plan list: a game that crashed after it had started (main pushes it). Returns an unsubscribe function. */
   onRenpyError(listener: (error: string) => void): () => void
 }
@@ -83,7 +86,8 @@ export const ASYNC_API_METHODS = [
   'renpyRun',
   'renpyLint',
   'renpyDistribute',
-  'revealInExplorer'
+  'revealInExplorer',
+  'listKits'
 ] as const satisfies readonly ApiMethod[]
 
 /** vnasset://p/<encoded dir>/<encoded file segments>. Pure string building, safe in every process. */

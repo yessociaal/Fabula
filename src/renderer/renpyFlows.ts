@@ -1,4 +1,5 @@
 import { cleanErrorMessage } from '@shared/ipc'
+import { currentKitContext } from './store/kitStore'
 import { parseLintReport } from '@shared/lintReport'
 import { storyHasCode } from '@shared/scriptFiles'
 import type { Id, Project } from '@shared/model'
@@ -35,7 +36,7 @@ async function saveAndValidate(): Promise<{ dir: string; project: Project } | nu
   await flushAutosave()
   const { dir, project } = useProjectStore.getState()
   if (!dir || !project) return null
-  const errors = validateProject(project).filter((p) => p.severity === 'error')
+  const errors = validateProject(project, currentKitContext()).filter((p) => p.severity === 'error')
   if (errors.length > 0) {
     ui().setProblemsOpen(true)
     toast(errors.length === 1 ? 'Fix 1 problem before running the game.' : `Fix ${errors.length} problems before running the game.`, 'error')

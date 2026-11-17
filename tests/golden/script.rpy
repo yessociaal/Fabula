@@ -209,3 +209,45 @@ label fork:
         jump left_path
     else:
         jump the_end
+
+
+label server_room:
+
+    "A terminal glows in the dark."
+
+    $ terminal_print("Booting NODE-7...")
+
+    $ terminal_open("NODE-7", ["Connection established.", "Type \"help\" for commands."], "> ")
+
+    label server_room_terminal:
+
+        $ command = terminal_read()
+
+        if command == "":
+            jump server_room_terminal
+
+        elif command == "help":
+            $ terminal_print("Commands: help, unlock, exit")
+            jump server_room_terminal
+
+        elif command == "unlock":
+            $ terminal_print("Access granted.")
+            $ has_key = True
+            $ terminal_close()
+            jump vault
+
+        elif command == "exit":
+            $ terminal_print("Goodbye.")
+            $ terminal_close()
+            jump the_end
+
+        else:
+            $ terminal_print("Unknown command.")
+            jump server_room_terminal
+
+
+label vault:
+
+    "The vault door swings open."
+
+    return

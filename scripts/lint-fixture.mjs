@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { bundle, placeholderFor, renpyExe, root, run, sdk } from './lib.mjs'
+import { bundle, loadFixture, placeholderFor, renpyExe, run, sdk } from './lib.mjs'
 
 function fail(message) {
   console.error(`FAIL: ${message}`)
@@ -16,11 +16,11 @@ async function main() {
   const workDir = mkdtempSync(join(tmpdir(), 'renpy-lint-'))
   try {
     const mods = await bundle(
-      { compiler: 'src/shared/compiler/index.ts', lintReport: 'src/shared/lintReport.ts' },
+      { compiler: 'src/shared/compiler/index.ts', kits: 'src/main/kits.ts', lintReport: 'src/shared/lintReport.ts' },
       join(workDir, 'bundle')
     )
-    const project = JSON.parse(readFileSync(join(root, 'tests', 'fixtures', 'demo.fabula.json'), 'utf8'))
-    const result = mods.compiler.compileProject(project)
+    const { project, kits } = loadFixture(mods.kits)
+    const result = mods.compiler.compileProject(project, { kits })
 
     const projectDir = join(workDir, 'game-project')
     const created = await run([

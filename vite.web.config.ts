@@ -6,5 +6,5 @@ export default defineConfig({
   root: resolve(__dirname, 'src/renderer'),
   resolve: { alias: { '@shared': resolve(__dirname, 'src/shared') } },
   plugins: [react()],
-  server: { port: 5173, strictPort: false }
+  server: { port: 5173, strictPort: false, fs: { allow: [resolve(__dirname)] } }
 })

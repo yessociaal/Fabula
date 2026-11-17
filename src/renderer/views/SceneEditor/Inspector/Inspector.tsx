@@ -14,6 +14,7 @@ import { DialogueInspector } from './DialogueInspector'
 import { HideInspector } from './HideInspector'
 import { IfInspector } from './IfInspector'
 import { InlineChoiceInspector } from './InlineChoiceInspector'
+import { KitInspector } from './KitInspector'
 import { MovieInspector } from './MovieInspector'
 import { PauseInspector } from './PauseInspector'
 import { PlayMusicInspector } from './PlayMusicInspector'
@@ -56,6 +57,8 @@ function Fields({ sceneId, block, path }: { sceneId: Id; block: Block; path: Blo
       return <WindowInspector {...p} block={block} />
     case 'clearPage':
       return <ClearPageInspector {...p} block={block} />
+    case 'kit':
+      return <KitInspector sceneId={sceneId} block={block} />
     case 'code':
       return <CodeInspector {...p} block={block} />
     case 'visit':

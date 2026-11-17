@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { kitContext } from './helpers/kits'
 import { validateProject } from '@shared/validate'
 import type { Problem } from '@shared/validate'
 import {
@@ -398,7 +399,7 @@ describe('the demo fixture', () => {
     const { parseProject } = await import('@shared/schema')
     const parsed = parseProject(readFileSync(new URL('./fixtures/demo.fabula.json', import.meta.url), 'utf8'))
     if (!parsed.ok) throw new Error(parsed.error)
-    expect(errors(validateProject(parsed.project)).map((p) => [p.sceneId, p.exitId])).toEqual([['s_gate2', 'else']])
+    expect(errors(validateProject(parsed.project, kitContext())).map((p) => [p.sceneId, p.exitId])).toEqual([['s_gate2', 'else']])
   })
 })
 

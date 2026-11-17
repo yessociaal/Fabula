@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useKitStore } from '../../store/kitStore'
 import { FileCode, Pencil, Plus, Trash2 } from 'lucide-react'
 import { compileProject } from '@shared/compiler'
 import type { Id } from '@shared/model'
@@ -56,6 +57,7 @@ function RenameBox({ id, name, onDone, onError }: { id: Id; name: string; onDone
 
 export default function ScriptFiles() {
   const project = useProjectStore((s) => s.project)
+  const kits = useKitStore((s) => s.kits)
   const [selection, setSelection] = useState<Selection>(null)
   const [renaming, setRenaming] = useState<Id | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -64,8 +66,8 @@ export default function ScriptFiles() {
   const generated = useMemo(() => {
     if (!project) return []
     const mine = new Set(usableScriptFiles(project).map((f) => scriptFilePath(f.name)))
-    return compileProject(project).files.filter((f) => !mine.has(f.path))
-  }, [project])
+    return compileProject(project, { kits }).files.filter((f) => !mine.has(f.path))
+  }, [project, kits])
 
   if (!project) return null
   const files = project.scriptFiles

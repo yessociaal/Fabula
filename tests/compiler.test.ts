@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { kitContext } from './helpers/kits'
 import { describe, expect, it } from 'vitest'
 import { compileProject } from '@shared/compiler'
 import { parseProject } from '@shared/schema'
@@ -455,14 +456,14 @@ describe('files, assets and locations', () => {
 
 describe('golden files and global rules', () => {
   const fixture = loadFixture()
-  const result = compileProject(fixture)
+  const result = compileProject(fixture, kitContext())
 
   it('the fixture passes parseProject', () => {
     expect(parseProject(readFileSync(fixturePath, 'utf8')).ok).toBe(true)
   })
 
   it('writes exactly the golden files', () => {
-    expect(result.files.map((f) => f.path)).toEqual(['script.rpy', 'act_one.rpy', 'act_two.rpy', 'extras.rpy'])
+    expect(result.files.map((f) => f.path)).toEqual(['script.rpy', 'act_one.rpy', 'act_two.rpy', 'extras.rpy', 'terminal.rpy'])
   })
 
   for (const name of ['script.rpy', 'act_one.rpy', 'act_two.rpy', 'extras.rpy']) {
@@ -471,6 +472,10 @@ describe('golden files and global rules', () => {
       expect(result.files.find((f) => f.path === name)?.content).toBe(expected)
     })
   }
+
+  it('the kit file is the Terminal kit file, byte for byte', () => {
+    expect(result.files.find((f) => f.path === 'terminal.rpy')?.content).toBe(readFileSync(new URL('../resources/kits/terminal/files/terminal.rpy', import.meta.url), 'utf8'))
+  })
 
   it('asset copies for the fixture', () => {
     expect(result.assetCopies.map((c) => c.to)).toEqual([
@@ -501,7 +506,9 @@ describe('golden files and global rules', () => {
       s_end: 'the_end',
       s_extras: 'extras',
       s_cutscene: 'cutscene_intro',
-      s_splash: 'splashscreen'
+      s_splash: 'splashscreen',
+      s_terminal: 'server_room',
+      s_vault: 'vault'
     }
     for (const [id, label] of Object.entries(labels)) {
       const loc = result.sceneLocations[id]
@@ -511,7 +518,7 @@ describe('golden files and global rules', () => {
   })
 
   it('compiling twice gives identical output', () => {
-    expect(compileProject(loadFixture())).toEqual(result)
+    expect(compileProject(loadFixture(), kitContext())).toEqual(result)
   })
 
   it('output has no comments and never names the tool', () => {

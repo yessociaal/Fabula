@@ -3,7 +3,12 @@ import { MAX_BLOCK_DEPTH, walkBlocks, type BlockPath } from './blockTree'
 import { findCodeRefs, mentionsLeaving } from './codeRefs'
 import { sceneSuccessors } from './edges'
 import { labelLockProblem } from './naming'
-import { scriptFileProblems } from './scriptFiles'
+import { scriptFileProblems, usableScriptFiles, scriptFilePath } from './scriptFiles'
+import { createCompileContext } from './compiler/context'
+import { renderKitPart } from './compiler/kits'
+import { findBlockDef, findEndingDef, findKit, type KitContext, type KitField, type LoadedKit } from './kits/types'
+import { kitRefs } from './kits/usage'
+import { buildNameTable } from './naming'
 
 export interface Problem {
   severity: 'error' | 'warning'
@@ -21,7 +26,8 @@ function valueMatches(type: 'boolean' | 'number' | 'text', value: unknown): bool
   return typeof value === 'string'
 }
 
-export function validateProject(project: Project): Problem[] {
+/** Check the story. Pass the loaded kits as `{ kits }` so kit blocks and endings can be checked; leaving them out means no kit is installed. */
+export function validateProject(project: Project, context: KitContext = {}): Problem[] {
   const problems: Problem[] = []
   const add = (p: Problem): void => {
     problems.push(p)
@@ -126,6 +132,74 @@ export function validateProject(project: Project): Problem[] {
 
   /** `block 3`, or `block 2.1.3` for a block inside another block. */
   const labelOf = (path: BlockPath): string => `block ${path.map((s) => s.i + 1).join('.')}`
+
+  let kitContext: ReturnType<typeof createCompileContext> | null = null
+  const renderContext = (): ReturnType<typeof createCompileContext> => (kitContext ??= createCompileContext(project, context))
+
+  /** Check one kit block or ending: the kit is installed, on and loaded, the type exists, the form values point at real things, and the template renders. */
+  const checkKitPart = (
+    scene: Scene,
+    what: 'block' | 'ending',
+    kitId: string,
+    type: string,
+    params: Record<string, unknown>,
+    label: string,
+    blockId?: Id,
+    exits?: { id: Id; name: string; target: Id | null }[]
+  ): void => {
+    const at = what === 'block' ? `the kit block (${label})` : 'the kit ending'
+    const report = (message: string, exitId?: string): void =>
+      add({ severity: 'error', message: `${sceneOf(scene)}: ${at} ${message}`, sceneId: scene.id, blockId, exitId })
+    const kit: LoadedKit | undefined = findKit(context, kitId)
+    if (!kit) return report(`uses the kit "${kitId}", which is not installed. Put the kit in your story's kits folder, or remove this ${what}.`)
+    if (kit.manifest === null) {
+      return report(`uses the kit "${kitId}", which could not be loaded (${(kit.error ?? '').split('\n')[0]}). Fix it in the Kits view.`)
+    }
+    const kitName = kit.manifest.name
+    if (!project.kits.includes(kitId)) return report(`uses the ${kitName} kit, which is turned off for this story. Turn it on in the Kits view.`)
+    const def = what === 'block' ? findBlockDef(kit, type) : findEndingDef(kit, type)
+    if (!def) return report(`uses "${type}", which the ${kitName} kit does not have.`)
+    const name = def.name
+
+    const refs = kitRefs(def.fields, params)
+    for (const id of refs.variables) usedVariables.add(id)
+    for (const id of refs.characters) usedCharacters.add(id)
+    for (const id of refs.assets) usedAssets.add(id)
+    for (const { effect, where } of refs.effects) checkEffect(scene, effect, `${name} (${where})`, blockId)
+    for (const { condition, where } of refs.conditions) checkCondition(scene, condition, `${name} (${where})`, blockId)
+    const checkPicks = (fields: readonly KitField[], values: Record<string, unknown>, prefix: string): void => {
+      for (const field of fields) {
+        const value = Object.prototype.hasOwnProperty.call(values, field.key) ? values[field.key] : null
+        if (field.type === 'list') {
+          if (Array.isArray(value)) {
+            value.forEach((item, i) => {
+              if (typeof item === 'object' && item !== null) checkPicks(field.fields, item as Record<string, unknown>, `${prefix}${field.label} ${i + 1}: `)
+            })
+          }
+          continue
+        }
+        if (typeof value !== 'string' || value === '') continue
+        if (field.type === 'variable') {
+          const variable = project.variables[value]
+          if (!variable) report(`has a variable pick (${prefix}${field.label}) that no longer exists. Pick another.`)
+          else if (field.varType !== undefined && variable.type !== field.varType) {
+            report(`needs a ${TYPE_WORD[field.varType]} variable for ${prefix}${field.label}, but ${variable.name} is not one.`)
+          }
+        } else if (field.type === 'character' && !project.characters[value]) {
+          report(`has a character pick (${prefix}${field.label}) that no longer exists. Pick another.`)
+        } else if (field.type === 'asset') {
+          const asset = project.assets[value]
+          if (!asset) report(`has a file pick (${prefix}${field.label}) that no longer exists. Pick another.`)
+          else if (asset.kind !== field.kind) report(`needs a ${field.kind} file for ${prefix}${field.label}, but ${asset.name} is not one.`)
+        }
+      }
+    }
+    checkPicks(def.fields, params, '')
+
+    const base = renderContext()
+    const rendered = renderKitPart(kit, def.template, def.fields, params, { ...base, sceneLabel: base.names.sceneLabels[scene.id] ?? '' }, exits)
+    if (!rendered.ok) report(`(${name}) has a problem in its kit template: ${rendered.error}`)
+  }
 
   /** scene name -> how many scenes have exactly that name */
   const sceneNameCounts = (): Map<string, number> => {
@@ -300,6 +374,9 @@ export function validateProject(project: Project): Problem[] {
         }
         break
       }
+      case 'kit':
+        checkKitPart(scene, 'block', block.kitId, block.blockType, block.params, label, block.id)
+        break
       case 'code':
         for (const ref of findCodeRefs(block.code, 'scene', [...nameCounts.keys()])) {
           const count = ref.known ? (nameCounts.get(ref.name) ?? 0) : 0
@@ -548,6 +625,45 @@ export function validateProject(project: Project): Problem[] {
           sceneId: scene.id
         })
       }
+    } else if (e.type === 'kit') {
+      checkKitPart(scene, 'ending', e.kitId, e.endingType, e.params, '', undefined, e.exits)
+      for (const x of e.exits) {
+        if (targetMissing(x.target)) {
+          add({
+            severity: 'error',
+            message: `${sceneOf(scene)}: the exit ${x.name.trim() === '' ? 'of the kit ending' : `"${x.name}"`} doesn't lead anywhere. Drag its dot to a scene.`,
+            sceneId: scene.id,
+            exitId: `x:${x.id}`
+          })
+        }
+      }
+    }
+  }
+
+  const kitProblem = (message: string): void => add({ severity: 'error', message })
+  const generated = new Map<string, string>()
+  for (const [chapterId, file] of Object.entries(buildNameTable(project).chapterFiles)) {
+    generated.set(file.toLowerCase(), `the chapter "${project.chapters[chapterId]?.name ?? file}"`)
+  }
+  for (const file of usableScriptFiles(project)) generated.set(scriptFilePath(file.name).toLowerCase(), `the script file "${file.name}"`)
+  const kitWrites = new Map<string, string>()
+  for (const id of project.kits) {
+    const kit = findKit(context, id)
+    if (!kit) {
+      kitProblem(`The kit "${id}" is turned on for this story but is not installed. Turn it off in the Kits view, or put the kit in your story's kits folder.`)
+      continue
+    }
+    if (kit.manifest === null) {
+      kitProblem(`The kit "${id}" is turned on but could not be loaded: ${(kit.error ?? '').split('\n')[0]}`)
+      continue
+    }
+    for (const file of kit.files) {
+      const key = file.to.toLowerCase()
+      const owner = generated.get(key)
+      if (owner) kitProblem(`The ${kit.manifest.name} kit writes "${file.to}", which is the file of ${owner}. Rename that, or turn the kit off.`)
+      const other = kitWrites.get(key)
+      if (other !== undefined && other !== id) kitProblem(`The kits "${other}" and "${id}" both write "${file.to}". Turn one of them off.`)
+      kitWrites.set(key, id)
     }
   }
 

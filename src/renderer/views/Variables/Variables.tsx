@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useKitStore } from '../../store/kitStore'
 import { Plus, Sigma, Trash2 } from 'lucide-react'
 import type { Id, Variable } from '@shared/model'
 import { countUsage, findUsage } from '@shared/usage'
@@ -23,7 +24,8 @@ export default function Variables() {
   const store = useProjectStore.getState
   const [retype, setRetype] = useState<{ id: Id; type: Variable['type'] } | null>(null)
   const [deleting, setDeleting] = useState<Id | null>(null)
-  const usage = useMemo(() => (project ? findUsage(project) : null), [project])
+  const kits = useKitStore((s) => s.kits)
+  const usage = useMemo(() => (project ? findUsage(project, { kits }) : null), [project, kits])
   if (!project || !usage) return null
 
   const retypeVar = retype ? project.variables[retype.id] : null

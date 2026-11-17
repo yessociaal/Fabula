@@ -1,5 +1,6 @@
 import { countBlocks, firstSayText, walkBlocks } from '@shared/blockTree'
 import type { Id, Project, Scene } from '@shared/model'
+import { findEndingDef, findKit, type KitContext } from '@shared/kits/types'
 import { conditionToWords } from '@shared/conditions'
 import { deriveEdges, deriveVisitEdges, listExits } from '@shared/edges'
 
@@ -25,6 +26,8 @@ export interface SceneCardInfo {
   isEnd: boolean
   /** The scene ends with Ren'Py code: the card says so above its named exits. */
   codeEnding?: true
+  /** The scene ends with a kit ending: its name, shown above the named exits. */
+  kitEnding?: { name: string; icon?: string }
 }
 
 export const ARROW_LABEL_MAX = 24
@@ -49,7 +52,7 @@ export function buildExitRows(scene: Scene, project: Project): ExitRowInfo[] {
   })
 }
 
-export function sceneCardInfo(scene: Scene, project: Project): SceneCardInfo {
+export function sceneCardInfo(scene: Scene, project: Project, context: KitContext = {}): SceneCardInfo {
   let backgroundAssetId: Id | null = null
   let firstLine = ''
   let found = false
@@ -66,7 +69,10 @@ export function sceneCardInfo(scene: Scene, project: Project): SceneCardInfo {
     }
   })
   const exits = buildExitRows(scene, project)
-  return { backgroundAssetId, firstLine, blockCount: countBlocks(scene.blocks), exits, isEnd: scene.ending.type === 'end', ...(scene.ending.type === 'code' ? { codeEnding: true as const } : {}) }
+  const e = scene.ending
+  const kitDef = e.type === 'kit' ? findEndingDef(findKit(context, e.kitId), e.endingType) : undefined
+  const kitEnding = e.type === 'kit' ? { name: kitDef?.name ?? `Kit "${e.kitId}" is not available`, icon: kitDef?.icon } : undefined
+  return { backgroundAssetId, firstLine, blockCount: countBlocks(scene.blocks), exits, isEnd: scene.ending.type === 'end', ...(scene.ending.type === 'code' ? { codeEnding: true as const } : {}), ...(kitEnding ? { kitEnding } : {}) }
 }
 
 /** Case-insensitive match on the scene name and on every dialogue line. An empty query matches nothing. */

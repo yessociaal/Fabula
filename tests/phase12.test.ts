@@ -9,6 +9,7 @@ import { deriveEdges, listExits, sceneSuccessors, setExitTarget } from '@shared/
 import { createBlock, createChapter, createNamedExit, createProject, createScene, createVariable } from '@shared/factory'
 import { CODE_BLOCK_NOTICE, start, step } from '@shared/interpreter'
 import type { Block, Ending, Project, Scene } from '@shared/model'
+import { kitContext } from './helpers/kits'
 import { parseProject } from '@shared/schema'
 import {
   nextScriptFileName,
@@ -589,7 +590,7 @@ describe('the demo fixture with the Phase 12 additions', () => {
   }
   it('validates with only the deliberate error, and nothing new in the warnings about code', () => {
     const p = load()
-    expect(validateProject(p).filter((x) => x.severity === 'error').map((x) => [x.sceneId, x.exitId])).toEqual([['s_gate2', 'else']])
+    expect(validateProject(p, kitContext()).filter((x) => x.severity === 'error').map((x) => [x.sceneId, x.exitId])).toEqual([['s_gate2', 'else']])
     expect(warnings(p).filter((m) => /code|exit|script file/i.test(m))).toEqual([])
   })
   it('the code ending has two exits, hence two arrows to different scenes', () => {
@@ -605,19 +606,19 @@ describe('the demo fixture with the Phase 12 additions', () => {
   })
   it('View script extracts exactly the lines of each scene', () => {
     const p = load()
-    const out = compileProject(p)
+    const out = compileProject(p, kitContext())
     const golden = readFileSync(new URL('./golden/script.rpy', import.meta.url), 'utf8')
-    expect(compileSceneScript(p, 's_fork')).toBe(
+    expect(compileSceneScript(p, 's_fork', kitContext())).toBe(
       'label fork:\n\n    "Left or right?"\n\n    if courage > 0:\n        jump left_path\n    else:\n        jump the_end'
     )
-    expect(golden.endsWith(`${compileSceneScript(p, 's_fork')}\n`)).toBe(true)
-    const code = compileSceneScript(p, 's_code') as string
+    expect(golden.includes(`${compileSceneScript(p, 's_fork', kitContext())}\n`)).toBe(true)
+    const code = compileSceneScript(p, 's_code', kitContext()) as string
     expect(code.startsWith('label code_room:\n')).toBe(true)
     expect(code.endsWith('    jump fork')).toBe(true)
     expect(code).toContain('    $ total = x + 2   \n')
     // every scene is found, starts with a label line, and holds no other scene's label
     for (const id of Object.keys(p.scenes)) {
-      const text = compileSceneScript(p, id) as string
+      const text = compileSceneScript(p, id, kitContext()) as string
       expect(text, id).toMatch(/^label [a-z_0-9]+:\n/)
       expect(text.match(/^label /gm), id).toHaveLength(1)
     }

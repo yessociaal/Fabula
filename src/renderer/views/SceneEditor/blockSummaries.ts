@@ -1,4 +1,6 @@
 import type { Block, Effect, Id, Project, Scalar } from '@shared/model'
+import { summaryLine } from '@shared/kits/fields'
+import { findBlockDef, findKit, type KitContext } from '@shared/kits/types'
 import { conditionToWords } from '@shared/conditions'
 import { firstCodeLine } from '@shared/codeRefs'
 import { transitionLabel } from './editorHelpers'
@@ -53,8 +55,14 @@ function withTransition(parts: string[], transition: Parameters<typeof transitio
   return (transition === 'none' ? parts : [...parts, transitionLabel(transition).toLowerCase()]).join(' · ')
 }
 
-export function summarizeBlock(block: Block, project: Project): BlockSummary {
+export function summarizeBlock(block: Block, project: Project, context: KitContext = {}): BlockSummary {
   switch (block.type) {
+    case 'kit': {
+      const kit = findKit(context, block.kitId)
+      const def = findBlockDef(kit, block.blockType)
+      if (!kit || !def) return { title: 'Kit', detail: `Kit "${block.kitId}" is not available` }
+      return { title: def.name, detail: oneLine(summaryLine(def.summary, def.name, def.fields, block.params)) }
+    }
     case 'say': {
       const text = block.text.trim() === '' ? '(empty)' : `"${oneLine(block.text)}"`
       if (block.characterId === null) return { title: 'Narration', detail: text }
@@ -137,8 +145,8 @@ export function summarizeBlock(block: Block, project: Project): BlockSummary {
 }
 
 /** The whole one-liner as a single string, e.g. `Show: Anna · Happy · left`. */
-export function summaryText(block: Block, project: Project): string {
-  const s = summarizeBlock(block, project)
+export function summaryText(block: Block, project: Project, context: KitContext = {}): string {
+  const s = summarizeBlock(block, project, context)
   if (block.type === 'say') return `${s.title} ${s.detail}`
   return `${s.title}: ${s.detail}`
 }

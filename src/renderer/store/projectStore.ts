@@ -34,6 +34,12 @@ import {
   newId
 } from '@shared/factory'
 import { nextScriptFileName, scriptFileNameProblem } from '@shared/scriptFiles'
+import { createKitBlock, createKitEnding } from '@shared/factory'
+import { defaultParams } from '@shared/kits/fields'
+import { syncKitExits } from '@shared/kits/exits'
+import { findBlockDef, findEndingDef, findKit } from '@shared/kits/types'
+import { scenesUsingKit } from '@shared/kits/usage'
+import { useKitStore } from './kitStore'
 import { listExits, setExitTarget as setExitTargetOn } from '@shared/edges'
 import {
   DEPTH_ERROR,
@@ -91,6 +97,17 @@ export interface ProjectState {
    */
   addBlock(sceneId: Id, type: CreatableBlockType, at?: number | BlockPath): Id | null
   addBlockAt(sceneId: Id, type: CreatableBlockType, at: BlockPath): BlockResult
+  /** Add a block of a kit (its form starts with the manifest defaults). Refused when the kit or block type is not available. */
+  addKitBlockAt(sceneId: Id, kitId: string, blockType: string, at: BlockPath): BlockResult
+  /** Turn a kit on or off for this story. Turning it off while a block or ending uses it is refused, and the scenes that use it are returned. */
+  setKitEnabled(kitId: string, enabled: boolean): { ok: true } | { ok: false; scenes: { id: Id; name: string }[] }
+  /**
+   * Save the form values of a kit block (`blockId`) or of the scene's kit ending (`null`). For an ending the exits are
+   * brought in line with the list the manifest names: new items get an exit, removed items lose theirs, the others keep their targets.
+   */
+  setKitParams(sceneId: Id, blockId: Id | null, params: Record<string, unknown>): void
+  /** Switch the scene's ending to a kit ending. The first target of the old ending moves to the first exit when there is one. */
+  setKitEnding(sceneId: Id, kitId: string, endingType: string): void
   /** Blocks are found by id at any depth. */
   updateBlock<T extends Block = Block>(sceneId: Id, blockId: Id, patch: BlockPatch<T>): void
   /**
@@ -349,6 +366,62 @@ export const useProjectStore = create<ProjectState>()(
             target.splice(Math.max(0, Math.min(splitPath(at).index, target.length)), 0, block)
           })
           return { ok: true, id: block.id }
+        },
+        addKitBlockAt(sceneId, kitId, blockType, at) {
+          const scene = findScene(get().project, sceneId)
+          if (!scene) return { ok: false, error: 'That scene no longer exists.' }
+          const def = findBlockDef(findKit(useKitStore.getState(), kitId), blockType)
+          if (!def) return { ok: false, error: 'That kit block is not available.' }
+          const list = at.length === 0 ? undefined : resolveList(scene.blocks, splitPath(at).container)
+          if (!list) return { ok: false, error: 'There is nowhere to put the block there.' }
+          const block = createKitBlock(kitId, blockType, defaultParams(def.fields))
+          if (!fitsDepth(at.length, blockHeight(block))) return { ok: false, error: DEPTH_ERROR }
+          mutateScene(sceneId, (s) => {
+            const target = resolveList(s.blocks, splitPath(at).container)
+            if (target) target.splice(Math.max(0, Math.min(splitPath(at).index, target.length)), 0, block)
+          })
+          return { ok: true, id: block.id }
+        },
+        setKitEnabled(kitId, enabled) {
+          const project = get().project
+          if (!project) return { ok: true }
+          if (!enabled) {
+            const scenes = scenesUsingKit(project, kitId)
+            if (scenes.length > 0) return { ok: false, scenes }
+          }
+          mutate((p) => {
+            const has = p.kits.includes(kitId)
+            if (enabled && !has) p.kits.push(kitId)
+            if (!enabled && has) p.kits = p.kits.filter((k) => k !== kitId)
+          })
+          return { ok: true }
+        },
+        setKitParams(sceneId, blockId, params) {
+          const kits = useKitStore.getState()
+          mutateScene(sceneId, (s) => {
+            if (blockId !== null) {
+              const path = findBlockPath(s.blocks, blockId)
+              const b = path ? getBlockAt(s.blocks, path) : undefined
+              if (b && b.type === 'kit') b.params = params
+              return
+            }
+            if (s.ending.type !== 'kit') return
+            s.ending.params = params
+            s.ending.exits = syncKitExits(s.ending, findKit(kits, s.ending.kitId))
+          })
+        },
+        setKitEnding(sceneId, kitId, endingType) {
+          const kit = findKit(useKitStore.getState(), kitId)
+          const def = findEndingDef(kit, endingType)
+          if (!def) return
+          mutateScene(sceneId, (s, p) => {
+            const target = listExits(s, p).find((x) => x.target !== null)?.target ?? null
+            const ending = createKitEnding(kitId, endingType, defaultParams(def.fields))
+            if (ending.type !== 'kit') return
+            ending.exits = syncKitExits(ending, kit)
+            if (target !== null && ending.exits.length > 0) ending.exits[0].target = target
+            s.ending = ending
+          })
         },
         updateBlock(sceneId, blockId, patch) {
           mutateScene(sceneId, (s) => {

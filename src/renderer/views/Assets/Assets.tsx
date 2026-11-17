@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useKitStore } from '../../store/kitStore'
 import { MoreHorizontal, Pause, Play, Upload } from 'lucide-react'
 import { ALLOWED_EXTENSIONS, isImageKind } from '@shared/assetTypes'
 import type { Asset, AssetKind, Id } from '@shared/model'
@@ -207,7 +208,8 @@ export default function Assets() {
   const [filter, setFilter] = useState('')
   const [deleting, setDeleting] = useState<Id | null>(null)
   const stopPreview = useAudioPreview((s) => s.stop)
-  const usage = useMemo(() => (project ? findUsage(project) : null), [project])
+  const kits = useKitStore((s) => s.kits)
+  const usage = useMemo(() => (project ? findUsage(project, { kits }) : null), [project, kits])
 
   const accept = ALLOWED_EXTENSIONS[tab].join(',')
   const { input, open } = useFileInput(accept, (files) => void importFiles(files, tab))

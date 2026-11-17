@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { findBlockPath, getBlockAt, splitPath, type BlockPath } from '@shared/blockTree'
-import type { Id } from '@shared/model'
+import type { CreatableBlockType, Id } from '@shared/model'
 import { toast } from '../../components/Toast'
 import { useProjectStore, type BlockResult } from '../../store/projectStore'
 import { useUiStore } from '../../store/uiStore'
@@ -32,7 +32,7 @@ export function addEntryAtPath(sceneId: Id, entry: PaletteEntry, at: BlockPath):
   if (!sceneOf(sceneId)) return null
   let refused = false
   const id = batch(() => {
-    const result = store().addBlockAt(sceneId, entry.type, at)
+    const result = entry.kit ? store().addKitBlockAt(sceneId, entry.kit.kitId, entry.kit.blockType, at) : store().addBlockAt(sceneId, entry.type as CreatableBlockType, at)
     if (!result.ok) {
       refused = true
       reportRefusal(result)

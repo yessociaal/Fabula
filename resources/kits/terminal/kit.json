@@ -1,0 +1,54 @@
+{
+  "id": "terminal",
+  "name": "Terminal",
+  "description": "A computer terminal the player types commands into. Add a Terminal session ending to a scene, list the commands, and choose which ones leave the terminal for another scene.",
+  "formatVersion": 1,
+  "files": [{ "from": "files/terminal.rpy", "to": "terminal.rpy" }],
+  "blocks": [
+    {
+      "type": "print",
+      "name": "Terminal: print",
+      "icon": "terminal",
+      "summary": "Terminal prints \"{{text}}\"",
+      "fields": [{ "key": "text", "label": "Text", "type": "multiline" }],
+      "template": "templates/print.txt"
+    },
+    {
+      "type": "clear",
+      "name": "Terminal: clear",
+      "icon": "eraser",
+      "summary": "Terminal clears the screen",
+      "fields": [],
+      "template": "templates/clear.txt"
+    }
+  ],
+  "endings": [
+    {
+      "type": "session",
+      "name": "Terminal session",
+      "icon": "terminal",
+      "fields": [
+        { "key": "title", "label": "Window title", "type": "text", "default": "TERMINAL" },
+        { "key": "prompt", "label": "Prompt", "type": "text", "default": "> " },
+        { "key": "intro", "label": "Opening lines", "type": "multiline" },
+        { "key": "help", "label": "Add a help command that lists the commands", "type": "boolean", "default": true },
+        { "key": "unknown", "label": "Reply to unknown commands", "type": "text", "default": "Unknown command." },
+        {
+          "key": "commands",
+          "label": "Commands",
+          "type": "list",
+          "itemLabel": "{{word}}",
+          "fields": [
+            { "key": "word", "label": "Player types", "type": "text" },
+            { "key": "reply", "label": "Terminal prints", "type": "multiline" },
+            { "key": "effects", "label": "Changes", "type": "effects" },
+            { "key": "only", "label": "Only when", "type": "condition" },
+            { "key": "leaves", "label": "Then leave the terminal", "type": "boolean" }
+          ]
+        }
+      ],
+      "exits": { "list": "commands", "when": "leaves", "name": "{{word}}" },
+      "template": "templates/session.txt"
+    }
+  ]
+}

@@ -4,6 +4,8 @@ import { conditionToPython } from '../conditions'
 import type { NameTable } from '../naming'
 import { audioPath, backgroundPath, lookupAsset, moviePath, spritePath } from './assets'
 import type { AssetCopy } from './assets'
+import type { LoadedKit } from '../kits/types'
+import { emitKitBlock } from './kits'
 import { escapeSayText, pythonDuration, pythonFloat, pythonNumber, pythonString, pythonValue } from './text'
 
 export interface CompileContext {
@@ -13,6 +15,10 @@ export interface CompileContext {
   copies: Map<string, AssetCopy>
   /** Set while emitting when any block uses the ambient channel, so that the channel gets registered once. */
   usesAmbient: boolean
+  /** The kits the story can use (loaded kit folders). Empty when none are installed. */
+  kits: readonly LoadedKit[]
+  /** Label of the scene being emitted, for kit templates. */
+  sceneLabel: string
 }
 
 export function sayText(text: string, ctx: CompileContext): string {
@@ -36,7 +42,7 @@ function withTransition(line: string, transition: Transition): string {
   return transition === 'none' ? line : `${line} with ${transition}`
 }
 
-function useAsset(ctx: CompileContext, assetId: Id, to: string): void {
+export function useAsset(ctx: CompileContext, assetId: Id, to: string): void {
   const asset = ctx.project.assets[assetId]
   if (!asset) return
   ctx.copies.set(to, { assetId, from: asset.file, to })
@@ -230,6 +236,8 @@ export function emitBlock(block: Block, ctx: CompileContext): string | null {
       }
       return ['menu:', ...items].join('\n\n')
     }
+    case 'kit':
+      return emitKitBlock(block, ctx)
     case 'code':
       return block.code.trim() === '' ? null : substituteSceneRefs(block.code, ctx)
     default:

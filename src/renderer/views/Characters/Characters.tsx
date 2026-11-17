@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useKitStore } from '../../store/kitStore'
 import { Plus, Trash2, Users } from 'lucide-react'
 import { ALLOWED_EXTENSIONS } from '@shared/assetTypes'
 import { findUsage } from '@shared/usage'
@@ -24,7 +25,8 @@ export default function Characters() {
   const [selected, setSelected] = useState<Id | null>(null)
   const [deleting, setDeleting] = useState<Id | null>(null)
 
-  const usage = useMemo(() => (project ? findUsage(project) : null), [project])
+  const kits = useKitStore((s) => s.kits)
+  const usage = useMemo(() => (project ? findUsage(project, { kits }) : null), [project, kits])
   if (!project || !usage) return null
 
   const current =

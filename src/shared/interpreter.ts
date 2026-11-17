@@ -67,6 +67,13 @@ export interface PlayState {
   codeExits: PlayMenuOption[] | null
   /** A Ren'Py code block was passed over without running (it cannot run in Quick play). */
   skippedCode: boolean
+  /**
+   * A kit ending is showing: Quick play cannot run kit code, so the player picks which exit to follow (ids are the NamedExit ids).
+   * `kitId` lets the view say which kit it is.
+   */
+  kitEnding: { kitId: string; endingType: string; exits: PlayMenuOption[] } | null
+  /** Ids of the kits whose blocks were passed over in this scene without running (kit code only runs in real Ren'Py). */
+  skippedKits: string[]
   variables: VariableValues
   /** Names of the scenes visited, in order. */
   history: string[]
@@ -85,6 +92,10 @@ export type PlayInput =
 export const NOWHERE_NOTICE = 'This exit goes nowhere'
 export const CODE_BLOCK_NOTICE = "This scene runs Ren'Py code that Quick play cannot run"
 export const CODE_ENDING_TITLE = "Ren'Py code ending: pick which exit to take"
+/** The side-panel line for a scene that passed over blocks of a kit. */
+export const kitBlockNotice = (kitName: string): string => `This scene uses the ${kitName} kit, which Quick play cannot run`
+export const kitEndingTitle = (kitName: string): string => `${kitName}: pick what happens`
+export const KIT_ENDING_NOTICE = "Kit code only runs in real Ren'Py. Use Play in Ren'Py to see what it really does."
 export const CODE_ENDING_NOTICE = "Quick play cannot run Ren'Py code. Use Play in Ren'Py to see what the code really does."
 /** A story that loops forever without ever waiting for the player is stopped after this many actions in one step. */
 const MAX_ACTIONS = 5000
@@ -141,6 +152,7 @@ function finish(s: PlayState, notice: string | null): void {
   s.pause = null
   s.menu = null
   s.codeExits = null
+  s.kitEnding = null
   s.ask = null
   s.movie = null
   s.notice = notice
@@ -152,6 +164,7 @@ function goTo(project: Project, s: PlayState, target: Id | null): void {
   s.sceneId = scene.id
   s.cursor = [{ i: 0 }]
   s.skippedCode = false
+  s.skippedKits = []
   s.history.push(scene.name)
 }
 
@@ -179,6 +192,7 @@ function run(project: Project, s: PlayState): void {
           s.sceneId = target.id
           s.cursor = [{ i: 0 }]
           s.skippedCode = false
+          s.skippedKits = []
           s.history.push(target.name)
           break
         }
@@ -197,6 +211,9 @@ function run(project: Project, s: PlayState): void {
         }
         case 'code':
           if (block.code.trim() !== '') s.skippedCode = true
+          break
+        case 'kit':
+          if (!s.skippedKits.includes(block.kitId)) s.skippedKits = [...s.skippedKits, block.kitId]
           break
         case 'say':
           s.line = { characterId: block.characterId, text: block.text }
@@ -287,6 +304,15 @@ function run(project: Project, s: PlayState): void {
         if (ending.code.trim() !== '') s.skippedCode = true
         return
       }
+      case 'kit': {
+        if (ending.exits.length === 0) return finish(s, 'This kit ending has no exits to follow')
+        s.kitEnding = {
+          kitId: ending.kitId,
+          endingType: ending.endingType,
+          exits: ending.exits.map((x) => ({ id: x.id, text: x.name.trim() === '' ? 'Untitled exit' : x.name }))
+        }
+        return
+      }
       default:
         return finish(s, 'Quick play cannot run this kind of ending')
     }
@@ -315,6 +341,8 @@ export function start(project: Project, sceneId: Id | null): PlayState {
     pause: null,
     menu: null,
     codeExits: null,
+    kitEnding: null,
+    skippedKits: [],
     skippedCode: false,
     variables: defaultVariables(project),
     history: scene ? [scene.name] : [],
@@ -347,16 +375,19 @@ export function step(project: Project, state: PlayState, input: PlayInput): Play
   if (input.type === 'exit') {
     const scene = s.sceneId ? project.scenes[s.sceneId] : undefined
     const ending = scene?.ending
-    if (!s.codeExits || !ending || ending.type !== 'code') return state
+    const isCode = s.codeExits !== null && ending?.type === 'code'
+    const isKit = s.kitEnding !== null && ending?.type === 'kit'
+    if (!ending || (!isCode && !isKit) || (ending.type !== 'code' && ending.type !== 'kit')) return state
     const exit = ending.exits.find((x) => x.id === input.exitId)
     if (!exit) return state
     s.codeExits = null
+    s.kitEnding = null
     goTo(project, s, exit.target)
     run(project, s)
     return s
   }
   if (input.type === 'advance') {
-    if (s.menu || s.ask || s.codeExits) return state
+    if (s.menu || s.ask || s.codeExits || s.kitEnding) return state
     s.line = null
     s.pause = null
     s.movie = null

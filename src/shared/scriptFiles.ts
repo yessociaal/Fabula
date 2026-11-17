@@ -1,6 +1,7 @@
 import { walkBlocks } from './blockTree'
 import type { Project, ScriptFile } from './model'
 import { buildNameTable } from './naming'
+import { kitsInUse } from './kits/usage'
 
 /** File names (without `.rpy`) that Fabula or Ren'Py's own project template owns. Compared in lower case. */
 const RESERVED_STEMS: readonly string[] = ['script', 'gui', 'screens', 'options', 'interface']
@@ -103,11 +104,11 @@ export function nextScriptFileName(project: Project, base = 'my_script'): string
 }
 
 /**
- * Whether the story contains any hand-written code: a Ren'Py code block (at any depth), a code ending, or a script file.
+ * Whether the story contains any hand-written or kit code: a Ren'Py code block (at any depth), a code ending, a kit block or ending, or a script file.
  * The Ren'Py lint runs automatically after an export when this is true.
  */
 export function storyHasCode(project: Project): boolean {
-  if (project.scriptFiles.length > 0) return true
+  if (project.scriptFiles.length > 0 || kitsInUse(project).size > 0) return true
   for (const scene of Object.values(project.scenes)) {
     if (scene.ending.type === 'code') return true
     let found = false

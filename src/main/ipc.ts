@@ -13,6 +13,7 @@ import {
   type ReadImageSize
 } from './projectFiles'
 import { exportProject } from './exporter'
+import { builtInKitsDir, listKits } from './kits'
 import { createProject, distribute, lint, runGame } from './renpy'
 import {
   addRecent,
@@ -23,6 +24,8 @@ import {
   saveSettings,
   type StoredSettings
 } from './settings'
+
+const kitsDir = (): string => builtInKitsDir({ isPackaged: app.isPackaged, resourcesPath: process.resourcesPath, appPath: app.getAppPath() })
 
 const NO_SDK = "The Ren'Py SDK folder is not set. Choose it in Settings."
 
@@ -126,7 +129,7 @@ export function registerIpc(): void {
       return createProject(sdk, targetDir, opts)
     },
     async exportToRenpy(dir, project) {
-      return exportProject(dir, project)
+      return exportProject(dir, project, { builtInKitsDir: kitsDir() })
     },
     async renpyRun(projectDir, warp) {
       const sdk = load().sdkDir
@@ -147,6 +150,10 @@ export function registerIpc(): void {
       const sdk = load().sdkDir
       if (!sdk) return { ok: false, error: NO_SDK }
       return distribute(sdk, projectDir, destDir)
+    },
+
+    async listKits(dir) {
+      return listKits(dir, kitsDir())
     },
 
     async revealInExplorer(path) {

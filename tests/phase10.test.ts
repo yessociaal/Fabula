@@ -21,6 +21,8 @@ import { blockSchema, parseProject } from '@shared/schema'
 import { findUsage } from '@shared/usage'
 import { validateProject } from '@shared/validate'
 import type { Block, Project, Scene } from '@shared/model'
+import type { KitContext } from '@shared/kits/types'
+import { kitContext } from './helpers/kits'
 import { useProjectStore, pauseHistory, resumeHistory, undo } from '../src/renderer/store/projectStore'
 import { MORE_PALETTE } from '../src/renderer/views/SceneEditor/paletteEntries'
 import { summarizeBlock } from '../src/renderer/views/SceneEditor/blockSummaries'
@@ -98,7 +100,7 @@ function script(w: World): string {
   return compileProject(w.project).files[0].content
 }
 
-const errors = (p: Project): string[] => validateProject(p).filter((x) => x.severity === 'error').map((x) => x.message)
+const errors = (p: Project, context: KitContext = {}): string[] => validateProject(p, context).filter((x) => x.severity === 'error').map((x) => x.message)
 
 describe('compiler: say with voice', () => {
   it('writes a voice line before the dialogue line and copies the file', () => {
@@ -463,7 +465,7 @@ describe('validation of the new rules', () => {
     const { readFileSync } = await import('node:fs')
     const parsed = parseProject(readFileSync(new URL('./fixtures/demo.fabula.json', import.meta.url), 'utf8'))
     if (!parsed.ok) throw new Error(parsed.error)
-    expect(errors(parsed.project)).toHaveLength(1)
+    expect(errors(parsed.project, kitContext())).toHaveLength(1)
   })
 })
 

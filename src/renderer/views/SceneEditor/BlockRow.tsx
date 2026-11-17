@@ -3,10 +3,11 @@ import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { GripVertical } from 'lucide-react'
 import type { Block, Id, Project } from '@shared/model'
 import { DraftArea, type DraftAreaHandle } from '../../components/DraftArea'
+import { useKitStore } from '../../store/kitStore'
 import { useProjectStore } from '../../store/projectStore'
 import { useUiStore } from '../../store/uiStore'
 import { addDialogueBelow, useFocusRequest } from './blockActions'
-import { blockIcon } from './blockMeta'
+import { blockIcon, kitBlockDef } from './blockMeta'
 import { summarizeBlock } from './blockSummaries'
 
 export interface RowProblem {
@@ -33,7 +34,9 @@ function BlockRowInner({ block, sceneId, project, selected, problem }: BlockRowP
   const updateBlock = useProjectStore((s) => s.updateBlock)
   const focusRequested = useFocusRequest((s) => s.blockId === block.id)
   const area = useRef<DraftAreaHandle>(null)
-  const summary = summarizeBlock(block, project)
+  const kits = useKitStore((s) => s.kits)
+  const summary = summarizeBlock(block, project, { kits })
+  const kitMissing = block.type === 'kit' && !kitBlockDef(block)
   const speakerColor = block.type === 'say' && block.characterId ? project.characters[block.characterId]?.color : undefined
 
   useEffect(() => {
@@ -48,7 +51,7 @@ function BlockRowInner({ block, sceneId, project, selected, problem }: BlockRowP
     block.type === 'if' || block.type === 'inlineChoice' ? 'block-container' : '',
     selected ? 'selected' : '',
     drag.isDragging ? 'dragging' : '',
-    problem ? `problem-${problem.severity}` : ''
+    problem ? `problem-${problem.severity}` : kitMissing ? 'problem-warning' : ''
   ]
     .filter(Boolean)
     .join(' ')
@@ -62,7 +65,7 @@ function BlockRowInner({ block, sceneId, project, selected, problem }: BlockRowP
       className={cls}
       data-block-id={block.id}
       data-block-type={block.type}
-      title={problem?.message}
+      title={problem?.message ?? (kitMissing ? summary.detail : undefined)}
       aria-selected={selected}
       onMouseDown={(e) => {
         e.stopPropagation()

@@ -1,0 +1,28 @@
+.kits-view { padding: 20px 24px; overflow: auto; height: 100%; }
+.kits-head h2 { margin: 0 0 4px; }
+.kits-head p { margin: 0 0 16px; color: var(--muted); max-width: 70ch; }
+.kit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.kit-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.kit-card.kit-failed { border-color: var(--danger); }
+.kit-card-head { display: flex; align-items: center; gap: 8px; }
+.kit-card-head h3 { margin: 0; flex: 1; font-size: 15px; }
+.kit-badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.kit-badge.kit-story { color: var(--accent); border-color: var(--accent); }
+.kit-description { margin: 0; color: var(--text); }
+.kit-adds { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.kit-adds li { display: flex; align-items: center; gap: 6px; }
+.kit-error { margin: 0; white-space: pre-wrap; background: var(--bg); border: 1px solid var(--danger); border-radius: 6px; padding: 8px; color: var(--danger); font-size: 12px; }
+.switch { width: 40px; height: 22px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); position: relative; cursor: pointer; padding: 0; }
+.switch.on { background: var(--accent); border-color: var(--accent); }
+.switch:disabled { opacity: 0.4; cursor: not-allowed; }
+.switch-knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--text); transition: left 0.12s; }
+.switch.on .switch-knob { left: 20px; }
+.kit-scene-list { margin: 8px 0 0; padding-left: 18px; }
+.link-button { background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; text-decoration: underline; font: inherit; }
+.kit-form { display: flex; flex-direction: column; gap: 10px; }
+.kit-list { display: flex; flex-direction: column; gap: 8px; }
+.kit-list-item { border: 1px solid var(--line); border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+.kit-list-head { display: flex; align-items: center; gap: 4px; }
+.kit-list-title { flex: 1; }
+.check-row { display: flex; align-items: center; gap: 8px; }
+.palette-kit-group { display: flex; flex-direction: column; gap: 4px; }

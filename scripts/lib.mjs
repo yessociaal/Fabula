@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { build } from 'vite'
@@ -120,4 +121,44 @@ export function placeholderFor(path) {
   if (lower.endsWith('.png')) return makePng()
   if (/\.(webm|ogv|mkv|mp4|ttf|otf)$/.test(lower)) return Buffer.alloc(64)
   return makeWav()
+}
+
+/** Load the project fixture, with the kits that come with the app switched on and loaded, ready for the compiler. */
+export function loadFixture(kitMods) {
+  const project = JSON.parse(readFileSync(join(root, 'tests', 'fixtures', 'demo.fabula.json'), 'utf8'))
+  const kits = kitMods.listKits('', join(root, 'resources', 'kits'))
+  return { project, kits }
+}
+
+/** Create a Ren'Py project folder with generate_gui. Returns the run result. */
+export function generateGame(targetDir, project) {
+  return run([
+    join(sdk, 'launcher'),
+    'generate_gui',
+    targetDir,
+    '--start',
+    '--width',
+    String(project.meta.width),
+    '--height',
+    String(project.meta.height),
+    '--accent',
+    project.meta.accentColor,
+    '--template',
+    join(sdk, 'gui')
+  ])
+}
+
+/** Write what the compiler produced (files and placeholder assets) into <gameProject>/game. */
+export function writeCompiled(gameProjectDir, result) {
+  const gameDir = join(gameProjectDir, 'game')
+  for (const file of result.files) {
+    const target = join(gameDir, ...file.path.split('/'))
+    mkdirSync(dirname(target), { recursive: true })
+    writeFileSync(target, file.content, 'utf8')
+  }
+  for (const copy of result.assetCopies) {
+    const target = join(gameDir, ...copy.to.split('/'))
+    mkdirSync(dirname(target), { recursive: true })
+    writeFileSync(target, placeholderFor(copy.to))
+  }
 }

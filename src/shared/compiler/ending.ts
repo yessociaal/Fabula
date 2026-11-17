@@ -2,6 +2,7 @@ import { replaceCodeRefs } from '../codeRefs'
 import type { Ending, Id } from '../model'
 import { conditionPython, emitEffect, indentLines, promptLine, sayText } from './blocks'
 import type { CompileContext } from './blocks'
+import { emitKitEnding } from './kits'
 
 const IND = '    '
 
@@ -61,6 +62,8 @@ export function emitEnding(ending: Ending, ctx: CompileContext): string | null {
       })
       return indentLines(text)
     }
+    case 'kit':
+      return emitKitEnding(ending, ctx)
     default:
       return null
   }

@@ -25,6 +25,7 @@ const api: Api = {
   renpyLint: call('renpyLint'),
   renpyDistribute: call('renpyDistribute'),
   revealInExplorer: call('revealInExplorer'),
+  listKits: call('listKits'),
   onRenpyError: (listener) => {
     const handler = (_event: unknown, message: string): void => listener(message)
     ipcRenderer.on(RENPY_ERROR_EVENT, handler)

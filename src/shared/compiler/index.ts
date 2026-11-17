@@ -1,11 +1,14 @@
 import type { Id, Project, Scene } from '../model'
-import { buildNameTable, sceneOrder } from '../naming'
+import { sceneOrder } from '../naming'
 import { scriptFilePath, usableScriptFiles } from '../scriptFiles'
 import type { AssetCopy } from './assets'
 import { lookupAsset, sidePath } from './assets'
 import { emitBlocks, indentLines } from './blocks'
 import type { CompileContext } from './blocks'
 import { emitEnding } from './ending'
+import { createCompileContext } from './context'
+import { kitFiles } from './kits'
+import type { KitContext } from '../kits/types'
 import { pythonString, pythonValue } from './text'
 
 export interface CompileResult {
@@ -20,21 +23,17 @@ interface Section {
 }
 
 function emitScene(scene: Scene, ctx: CompileContext): string {
+  ctx.sceneLabel = ctx.names.sceneLabels[scene.id]
   const statements = emitBlocks(scene.blocks, ctx).map((text) => indentLines(text))
   const ending = emitEnding(scene.ending, ctx)
   if (ending !== null) statements.push(ending)
   return [`label ${ctx.names.sceneLabels[scene.id]}:`, ...statements].join('\n\n')
 }
 
-export function compileProject(project: Project): CompileResult {
-  const names = buildNameTable(project)
-  const ctx: CompileContext = {
-    project,
-    names,
-    knownVariables: new Set(Object.values(names.variableRefs)),
-    copies: new Map<string, AssetCopy>(),
-    usesAmbient: false
-  }
+/** Compile the story. Pass the loaded kits as `{ kits }`; without them kit blocks, kit endings and kit files are left out. */
+export function compileProject(project: Project, context: KitContext = {}): CompileResult {
+  const ctx = createCompileContext(project, context)
+  const names = ctx.names
 
   const scenes = sceneOrder(project)
   const startFirst = (list: Scene[]): Scene[] => {
@@ -105,6 +104,9 @@ export function compileProject(project: Project): CompileResult {
 
   // Script files the author wrote: each goes out exactly as typed, under its own name.
   for (const file of usableScriptFiles(project)) files.push({ path: scriptFilePath(file.name), content: file.content })
+
+  const taken = new Set(files.map((f) => f.path.toLowerCase()))
+  files.push(...kitFiles(project, ctx.kits, taken))
 
   const assetCopies = [...ctx.copies.values()].sort((a, b) => (a.to < b.to ? -1 : a.to > b.to ? 1 : 0))
   return { files, assetCopies, sceneLocations }

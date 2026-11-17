@@ -6,6 +6,7 @@ import {
   FileCode,
   Home as HomeIcon,
   Map as MapIcon,
+  Puzzle,
   Play,
   Redo2,
   Settings as SettingsIcon,
@@ -32,6 +33,8 @@ import SceneEditor from '../SceneEditor/SceneEditor'
 import StoryMap from '../StoryMap/StoryMap'
 import Variables from '../Variables/Variables'
 import ScriptFiles from '../ScriptFiles/ScriptFiles'
+import Kits from '../Kits/Kits'
+import { useKitContext } from '../../store/kitStore'
 import { ProblemsDrawer } from '../Problems/ProblemsDrawer'
 import Settings from '../Settings/Settings'
 import { RenpyDialogs } from './RenpyDialogs'
@@ -42,6 +45,7 @@ const RAIL: { view: View; label: string; icon: ReactNode; empty: string }[] = [
   { view: 'assets', label: 'Assets', icon: <ImageIcon size={20} />, empty: 'The assets view arrives in a later step.' },
   { view: 'variables', label: 'Variables', icon: <Sigma size={20} />, empty: 'The variables view arrives in a later step.' },
   { view: 'scripts', label: 'Script files', icon: <FileCode size={20} />, empty: 'The script files view arrives in a later step.' },
+  { view: 'kits', label: 'Kits', icon: <Puzzle size={20} />, empty: 'The kits view arrives in a later step.' },
   { view: 'settings', label: 'Settings', icon: <SettingsIcon size={20} />, empty: 'The settings view arrives in a later step.' }
 ]
 
@@ -95,6 +99,7 @@ export default function Shell() {
   const canRedo = useStore(useProjectStore.temporal, (t) => t.futureStates.length > 0)
   const busy = useUiStore((s) => s.busy)
   const problemsOpen = useUiStore((s) => s.problemsOpen)
+  const kitContext = useKitContext()
   const [exportMenu, setExportMenu] = useState<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
@@ -117,7 +122,7 @@ export default function Shell() {
 
   if (!project) return null
 
-  const problems = validateProject(project)
+  const problems = validateProject(project, kitContext)
   const errors = problems.filter((p) => p.severity === 'error').length
   const count = problems.length
   const active = (v: View): boolean => view === v || (v === 'map' && view === 'scene')
@@ -218,6 +223,8 @@ export default function Shell() {
             <SceneEditor />
           ) : view === 'scripts' ? (
             <ScriptFiles />
+          ) : view === 'kits' ? (
+            <Kits />
           ) : view === 'settings' ? (
             <Settings />
           ) : (

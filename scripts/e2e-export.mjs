@@ -59,6 +59,7 @@ async function main() {
       join(work, 'bundle')
     )
     const { exportProject } = mods.exporter
+    const exportOptions = { builtInKitsDir: join(root, 'resources', 'kits') }
     const { createProject, lint, distribute, runGame, readNewError } = mods.renpy
 
     // A clean copy of the demo story: the fixture has one known error (the "Otherwise" exit of the second Gate).
@@ -84,7 +85,7 @@ async function main() {
     const filesBefore = listFiles(gameDir)
 
     // 2. first export
-    const first = exportProject(editor, project)
+    const first = exportProject(editor, project, exportOptions)
     check(first.ok === true, `first export succeeded${first.ok ? ` (${first.changed.length} files written)` : `: ${first.error}`}`)
     const added = listFiles(gameDir).filter((f) => !filesBefore.includes(f))
     check(added.length > 0 && added.every((f) => f.startsWith('game/')), `export wrote only game files (${added.length} new)`)
@@ -93,7 +94,7 @@ async function main() {
     const manifest = JSON.parse(readFileSync(join(editor, 'export-manifest.json'), 'utf8'))
     check(manifest.files.includes('script.rpy') && !existsSync(join(gameDir, 'export-manifest.json')), 'manifest is in the editor folder, not the game')
     check(existsSync(join(editor, 'backups')), 'the template script.rpy was backed up')
-    for (const f of ['script.rpy', 'act_one.rpy', 'act_two.rpy']) {
+    for (const f of ['script.rpy', 'act_one.rpy', 'act_two.rpy', 'terminal.rpy']) {
       const text = readFileSync(join(gameDir, 'game', f), 'utf8')
       check(!/^\s*#/m.test(text) && !/fabula|generated/i.test(text), `${f} has no comment and no tool name`)
     }
@@ -121,6 +122,10 @@ async function main() {
     const extrasFile = join(gameDir, 'game', 'extras.rpy')
     check(existsSync(extrasFile) && readFileSync(extrasFile, 'utf8') === project.scriptFiles[0].content, 'the script file extras.rpy was written byte for byte')
     check(manifest.files.includes('extras.rpy'), 'the script file is listed in the export manifest')
+    const kitFile = join(gameDir, 'game', 'terminal.rpy')
+    check(existsSync(kitFile) && readFileSync(kitFile, 'utf8').includes('screen terminal('), 'the kit file terminal.rpy was copied into the game')
+    check(manifest.files.includes('terminal.rpy'), 'the kit file is listed in the export manifest')
+    check(script.includes('    label server_room_terminal:') && script.includes('            jump vault'), 'the exported script contains the Terminal session with its exits')
     check(
       existsSync(join(gameDir, 'game', 'images', 'characters', 'side nova.png')) && existsSync(join(gameDir, 'game', 'movies', 'intro.webm')),
       'the side image and the movie file were copied into the game'
@@ -138,7 +143,7 @@ async function main() {
     const snapA = snapshot(gameDir)
     const manifestMtime = statSync(join(editor, 'export-manifest.json')).mtimeMs
     await sleep(50)
-    const second = exportProject(editor, project)
+    const second = exportProject(editor, project, exportOptions)
     check(second.ok === true && second.changed.length === 0, `second export reported no changes (${second.changed?.length ?? '?'} files)`)
     const snapB = snapshot(gameDir)
     check(JSON.stringify(snapA) === JSON.stringify(snapB), 'every file in the game folder has the same content and mtime after the second export')
@@ -173,7 +178,8 @@ async function main() {
       ['s_tour', 'the scene that visits a sub-scene (twice, once inside an If inside a Choice option)'],
       ['s_cellar', 'the sub-scene itself'],
       ['s_code', 'the scene with the code block (it shows the screen from the script file)'],
-      ['s_fork', 'the scene with the code ending (two named exits)']
+      ['s_fork', 'the scene with the code ending (two named exits)'],
+      ['s_terminal', 'the Terminal scene (a kit block, then a Terminal session ending with two leaving commands)']
     ]) {
       const loc = second.sceneLocations[id]
       const w = { file: loc.file, line: loc.line + 1 }

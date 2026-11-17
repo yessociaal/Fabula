@@ -3,6 +3,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { MessageSquare } from 'lucide-react'
 import { countBlocks } from '@shared/blockTree'
 import type { Id, Project, Scene } from '@shared/model'
+import { useKitStore } from '../../store/kitStore'
 import { validateProject } from '@shared/validate'
 import { Button } from '../../components/Button'
 import { useUiStore } from '../../store/uiStore'
@@ -21,9 +22,10 @@ interface BlockListProps {
 
 /** Problems of this scene grouped by block (the worst one wins). Blocks at any depth are covered. */
 function useBlockProblems(project: Project, sceneId: Id): Map<Id, RowProblem> {
+  const kits = useKitStore((s) => s.kits)
   return useMemo(() => {
     const map = new Map<Id, RowProblem>()
-    for (const p of validateProject(project)) {
+    for (const p of validateProject(project, { kits })) {
       if (p.sceneId !== sceneId || !p.blockId) continue
       const have = map.get(p.blockId)
       if (!have || (have.severity === 'warning' && p.severity === 'error')) {
@@ -31,7 +33,7 @@ function useBlockProblems(project: Project, sceneId: Id): Map<Id, RowProblem> {
       }
     }
     return map
-  }, [project, sceneId])
+  }, [project, sceneId, kits])
 }
 
 /** The scene's blocks as a tree: rows, with If and Choice blocks showing indented drop areas beneath them. */

@@ -1,3 +1,4 @@
+import { useKitContext } from '../../store/kitStore'
 import { useEffect } from 'react'
 import { AlertTriangle, CircleAlert, X } from 'lucide-react'
 import { findBlock } from '@shared/blockTree'
@@ -74,6 +75,7 @@ function ProblemList({ problems, title, kind }: { problems: Problem[]; title: st
 /** Right-side drawer listing everything validateProject found, errors first. */
 export function ProblemsDrawer() {
   const project = useProjectStore((s) => s.project)
+  const kitContext = useKitContext()
   const open = useUiStore((s) => s.problemsOpen)
   const setOpen = useUiStore((s) => s.setProblemsOpen)
 
@@ -87,7 +89,7 @@ export function ProblemsDrawer() {
   }, [open, setOpen])
 
   if (!open || !project) return null
-  const problems = validateProject(project)
+  const problems = validateProject(project, kitContext)
   const errors = problems.filter((p) => p.severity === 'error')
   const warnings = problems.filter((p) => p.severity === 'warning')
 

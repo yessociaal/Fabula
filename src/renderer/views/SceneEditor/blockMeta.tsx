@@ -20,11 +20,20 @@ import {
   UserX,
   VolumeX
 } from 'lucide-react'
+import { findBlockDef, findKit } from '@shared/kits/types'
 import type { Block } from '@shared/model'
+import { KitIcon } from '../../components/KitIcon'
+import { useKitStore } from '../../store/kitStore'
 
-export { ALL_PALETTE, MORE_PALETTE, PALETTE, type PaletteEntry } from './paletteEntries'
+export { ALL_PALETTE, MORE_PALETTE, PALETTE, kitPaletteGroups, type PaletteEntry } from './paletteEntries'
 
-export function blockIcon(block: Pick<Block, 'type'> & { characterId?: string | null }, size = 16): ReactNode {
+/** The manifest entry of a kit block, or undefined when the kit or the block type is not available. */
+export function kitBlockDef(block: Block): ReturnType<typeof findBlockDef> {
+  return block.type === 'kit' ? findBlockDef(findKit(useKitStore.getState(), block.kitId), block.blockType) : undefined
+}
+
+export function blockIcon(block: Block, size = 16): ReactNode {
+  if (block.type === 'kit') return <KitIcon name={kitBlockDef(block)?.icon} size={size} />
   return iconFor(block.type, block.type === 'say' && block.characterId === null, size)
 }
 
@@ -102,6 +111,8 @@ export function blockKindLabel(block: Block): string {
       return 'Text box show/hide'
     case 'clearPage':
       return 'Clear page'
+    case 'kit':
+      return kitBlockDef(block)?.name ?? 'Kit block'
     case 'code':
       return "Ren'Py code"
     case 'visit':

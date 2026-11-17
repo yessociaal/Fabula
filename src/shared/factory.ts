@@ -11,6 +11,7 @@ import type {
   Condition,
   CreatableBlockType,
   Effect,
+  Ending,
   Expression,
   Id,
   InlineChoiceOption,
@@ -175,15 +176,32 @@ export function createAsset(
   return { id: newId(), kind, name, file, width: null, height: null, bytes: 0, ...extra }
 }
 
-/** Deep copy with a fresh `id` on every nested object that has one. */
-export function cloneWithNewIds<T>(value: T): T {
-  if (Array.isArray(value)) return value.map((v) => cloneWithNewIds(v)) as unknown as T
+/**
+ * Deep copy with a fresh "id" on every nested object that has one. The same old id always becomes the same new id inside
+ * one copy, so things that point at each other by id (a kit ending's exits and the list items they come from) stay linked.
+ */
+export function cloneWithNewIds<T>(value: T, map: Map<string, string> = new Map()): T {
+  if (Array.isArray(value)) return value.map((v) => cloneWithNewIds(v, map)) as unknown as T
   if (value && typeof value === 'object') {
     const out: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      out[k] = k === 'id' && typeof v === 'string' ? newId() : cloneWithNewIds(v)
+      if (k === 'id' && typeof v === 'string') {
+        let fresh = map.get(v)
+        if (fresh === undefined) map.set(v, (fresh = newId()))
+        out[k] = fresh
+      } else out[k] = cloneWithNewIds(v, map)
     }
     return out as T
   }
   return value
+}
+
+/** A kit block with the given form values (see defaultParams in kits/fields.ts for the starting ones). */
+export function createKitBlock(kitId: string, blockType: string, params: Record<string, unknown>): Block {
+  return { id: newId(), type: 'kit', kitId, blockType, params }
+}
+
+/** A kit ending; its exits come from syncKitExits. */
+export function createKitEnding(kitId: string, endingType: string, params: Record<string, unknown>, exits: NamedExit[] = []): Ending {
+  return { type: 'kit', kitId, endingType, params, exits }
 }

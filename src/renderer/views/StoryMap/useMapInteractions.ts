@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import type { LoadedKit } from '@shared/kits/types'
+import { useKitStore } from '../../store/kitStore'
 import {
   MarkerType,
   useReactFlow,
@@ -34,10 +36,10 @@ interface SceneProblems {
   text: string
 }
 
-function problemsByScene(project: Project): Map<Id, SceneProblems> {
+function problemsByScene(project: Project, kits: readonly LoadedKit[]): Map<Id, SceneProblems> {
   const out = new Map<Id, SceneProblems>()
   const messages = new Map<Id, string[]>()
-  for (const p of validateProject(project)) {
+  for (const p of validateProject(project, { kits })) {
     if (!p.sceneId) continue
     const cur = out.get(p.sceneId) ?? { errors: 0, warnings: 0, text: '' }
     if (p.severity === 'error') cur.errors++
@@ -89,7 +91,8 @@ export function useMapInteractions(wrapperRef: RefObject<HTMLDivElement | null>,
   const [measured, setMeasured] = useState<Record<Id, { width: number; height: number }>>({})
 
   // ----- derived view data (memoised; edges are never stored) -----
-  const problems = useMemo(() => problemsByScene(project), [project])
+  const kits = useKitStore((s) => s.kits)
+  const problems = useMemo(() => problemsByScene(project, kits), [project, kits])
   const distances = useMemo(() => distancesFromStart(project), [project])
   const matches = useMemo(() => matchingSceneIds(project, query), [project, query])
   const baseEdges = useMemo(() => deriveEdges(project), [project])

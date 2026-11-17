@@ -1,5 +1,7 @@
 import { walkBlocks } from './blockTree'
 import type { Condition, Effect, Id, Project, Scene, ScreenElement } from './model'
+import { findBlockDef, findEndingDef, findKit, type KitContext, type KitField } from './kits/types'
+import { kitRefs } from './kits/usage'
 
 /** One place where an asset, character or variable is used. */
 export interface UsageRef {
@@ -50,7 +52,7 @@ const short = (text: string, max = 28): string => {
  * is NOT scanned: a variable or file that only your own code mentions still shows as unused. This is deliberate,
  * because Fabula never reads inside code you wrote.
  */
-export function findUsage(project: Project): UsageIndex {
+export function findUsage(project: Project, context: KitContext = {}): UsageIndex {
   const index: UsageIndex = { assets: {}, characters: {}, variables: {} }
   const add = (map: Record<Id, UsageRef[]>, id: Id | null | undefined, ref: UsageRef): void => {
     if (!id) return
@@ -65,6 +67,14 @@ export function findUsage(project: Project): UsageIndex {
     for (const cl of c.clauses) {
       add(index.variables, cl.variableId, { ...ref, description: `${ref.description}: condition` })
     }
+  }
+
+  const kitUse = (fields: readonly KitField[] | undefined, params: Record<string, unknown>, ref: UsageRef): void => {
+    if (!fields) return
+    const refs = kitRefs(fields, params)
+    for (const id of refs.variables) add(index.variables, id, ref)
+    for (const id of refs.characters) add(index.characters, id, ref)
+    for (const id of refs.assets) add(index.assets, id, ref)
   }
 
   const sceneIds = Object.keys(project.scenes)
@@ -124,6 +134,12 @@ export function findUsage(project: Project): UsageIndex {
             conditionUse(o.condition, base(`Choice option "${short(o.text)}"`, { blockId: b.id, optionId: o.id }))
           }
           break
+        case 'kit': {
+          const kit = findKit(context, b.kitId)
+          const def = findBlockDef(kit, b.blockType)
+          kitUse(def?.fields, b.params, at(`${def?.name ?? 'Kit block'}`))
+          break
+        }
         default:
           break
       }
@@ -137,6 +153,9 @@ export function findUsage(project: Project): UsageIndex {
         conditionUse(o.condition, ref)
         for (const ef of o.effects) effectUse(ef, ref, 'changes it')
       }
+    } else if (e.type === 'kit') {
+      const def = findEndingDef(findKit(context, e.kitId), e.endingType)
+      kitUse(def?.fields, e.params, base(`Ending: ${def?.name ?? 'kit ending'}`))
     } else if (e.type === 'branch') {
       e.cases.forEach((c, i) => {
         conditionUse(c.condition, base(`Ending: case ${i + 1}`, { caseId: c.id }))

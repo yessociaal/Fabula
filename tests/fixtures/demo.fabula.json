@@ -1000,6 +1000,116 @@
       },
       "labelLock": null,
       "role": "normal"
+    },
+    "s_vault": {
+      "id": "s_vault",
+      "name": "Vault",
+      "notes": "",
+      "position": {
+        "x": 0,
+        "y": 900
+      },
+      "chapterId": null,
+      "blocks": [
+        {
+          "id": "vt01",
+          "type": "say",
+          "characterId": null,
+          "text": "The vault door swings open.",
+          "voiceAssetId": null
+        }
+      ],
+      "ending": {
+        "type": "end"
+      },
+      "labelLock": null,
+      "role": "normal"
+    },
+    "s_terminal": {
+      "id": "s_terminal",
+      "name": "Server room",
+      "notes": "",
+      "position": {
+        "x": 0,
+        "y": 800
+      },
+      "chapterId": null,
+      "blocks": [
+        {
+          "id": "tm01",
+          "type": "say",
+          "characterId": null,
+          "text": "A terminal glows in the dark.",
+          "voiceAssetId": null
+        },
+        {
+          "id": "tm02",
+          "type": "kit",
+          "kitId": "terminal",
+          "blockType": "print",
+          "params": {
+            "text": "Booting NODE-7..."
+          }
+        }
+      ],
+      "ending": {
+        "type": "kit",
+        "kitId": "terminal",
+        "endingType": "session",
+        "params": {
+          "title": "NODE-7",
+          "prompt": "> ",
+          "intro": "Connection established.\nType \"help\" for commands.",
+          "help": false,
+          "unknown": "Unknown command.",
+          "commands": [
+            {
+              "id": "tc1",
+              "word": "help",
+              "reply": "Commands: help, unlock, exit",
+              "effects": [],
+              "only": null,
+              "leaves": false
+            },
+            {
+              "id": "tc2",
+              "word": "unlock",
+              "reply": "Access granted.",
+              "effects": [
+                {
+                  "variableId": "v_key",
+                  "op": "set",
+                  "value": true
+                }
+              ],
+              "only": null,
+              "leaves": true
+            },
+            {
+              "id": "tc3",
+              "word": "exit",
+              "reply": "Goodbye.",
+              "effects": [],
+              "only": null,
+              "leaves": true
+            }
+          ]
+        },
+        "exits": [
+          {
+            "id": "tc2",
+            "name": "unlock",
+            "target": "s_vault"
+          },
+          {
+            "id": "tc3",
+            "name": "exit",
+            "target": "s_end"
+          }
+        ]
+      },
+      "labelLock": null,
+      "role": "normal"
     }
   },
   "chapters": {
@@ -1300,6 +1410,8 @@
       "content": "screen demo_overlay():\n\n    frame:\n        xalign 0.98\n        yalign 0.02\n        text \"Overlay from a script file\"\n"
     }
   ],
-  "kits": [],
+  "kits": [
+    "terminal"
+  ],
   "look": {}
 }

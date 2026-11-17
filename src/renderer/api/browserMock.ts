@@ -6,6 +6,22 @@ import type { Asset, Project } from '@shared/model'
 import { parseProject } from '@shared/schema'
 import { compileProject } from '@shared/compiler'
 import { validateProject } from '@shared/validate'
+import { loadKit } from '@shared/kits/load'
+import type { LoadedKit } from '@shared/kits/types'
+
+// The kits that come with the app, read as text so the browser version shows the same kits as the desktop app.
+const BUILT_IN_KIT_TEXT = import.meta.glob('../../../resources/kits/*/**/*', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
+
+function builtInKits(): LoadedKit[] {
+  const folders = new Map<string, Map<string, string>>()
+  for (const [path, text] of Object.entries(BUILT_IN_KIT_TEXT)) {
+    const m = /\/kits\/([^/]+)\/(.+)$/.exec(path)
+    if (!m) continue
+    if (!folders.has(m[1])) folders.set(m[1], new Map())
+    folders.get(m[1])?.set(m[2], text)
+  }
+  return [...folders.entries()].map(([name, files]) => loadKit({ name, source: 'built-in', folder: '', readText: (rel) => files.get(rel) ?? null }))
+}
 
 /**
  * In-memory Api for running the UI in a plain browser (npm run dev:web).
@@ -172,9 +188,10 @@ export const browserMock: Api = {
     return { ok: true }
   },
   async exportToRenpy(_dir, project) {
-    const problems = validateProject(project)
+    const kits = builtInKits()
+    const problems = validateProject(project, { kits })
     if (problems.some((p) => p.severity === 'error')) return { ok: false, error: 'There are problems to fix before exporting.', problems }
-    return { ok: true, sceneLocations: compileProject(project).sceneLocations, changed: [], problems }
+    return { ok: true, sceneLocations: compileProject(project, { kits }).sceneLocations, changed: [], problems }
   },
   async renpyRun() {
     return { ok: false, error: DESKTOP_ONLY }
@@ -184,6 +201,9 @@ export const browserMock: Api = {
   },
   async renpyDistribute() {
     return { ok: false, error: DESKTOP_ONLY }
+  },
+  async listKits() {
+    return builtInKits()
   },
   async revealInExplorer() {
     // nothing to reveal in a browser

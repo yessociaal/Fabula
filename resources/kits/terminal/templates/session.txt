@@ -1,0 +1,30 @@
+$ terminal_open({{title|text}}, [{{intro|lines}}], {{prompt|text}})
+
+label {{@label}}_terminal:
+
+    $ command = terminal_read()
+
+    if command == "":
+        jump {{@label}}_terminal
+
+{{#if help}}
+    elif command == "help":
+        $ terminal_help([{{#each commands}}{{word|lower|py}}{{#if @last}}{{else}}, {{/if}}{{/each}}])
+        jump {{@label}}_terminal
+
+{{/if}}
+{{#each commands}}
+    elif command == {{word|lower|py}}{{#if only}} and ({{only|condition}}){{/if}}:
+        $ terminal_print({{reply|text}})
+        {{effects|effects}}
+{{#if leaves}}
+        $ terminal_close()
+        jump {{@exit}}
+{{else}}
+        jump {{@label}}_terminal
+{{/if}}
+
+{{/each}}
+    else:
+        $ terminal_print({{unknown|text}})
+        jump {{@label}}_terminal

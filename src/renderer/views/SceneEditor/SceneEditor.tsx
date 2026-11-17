@@ -15,13 +15,14 @@ import {
 import { ArrowLeft, Map as MapIcon } from 'lucide-react'
 import { blockHeight, findBlockPath, getBlockAt } from '@shared/blockTree'
 import { createBlock } from '@shared/factory'
-import type { Id, Scene } from '@shared/model'
+import type { CreatableBlockType, Id, Scene } from '@shared/model'
 import { Button } from '../../components/Button'
 import { EmptyState } from '../../components/EmptyState'
 import { useProjectStore } from '../../store/projectStore'
 import { useUiStore } from '../../store/uiStore'
 import './sceneEditor.css'
 import { addEntryAtPath, reportRefusal } from './blockActions'
+import { useKitStore } from '../../store/kitStore'
 import { blockIcon, type PaletteEntry } from './blockMeta'
 import { summarizeBlock } from './blockSummaries'
 import { BlockList } from './BlockList'
@@ -62,7 +63,7 @@ function BlockGhost({ sceneId, id }: { sceneId: Id; id: Id }) {
   const path = scene ? findBlockPath(scene.blocks, id) : null
   const block = scene && path ? getBlockAt(scene.blocks, path) : undefined
   if (!project || !block) return null
-  const summary = summarizeBlock(block, project)
+  const summary = summarizeBlock(block, project, { kits: useKitStore.getState().kits })
   return (
     <div className="block-row block-ghost">
       <span className="row-icon">{blockIcon(block)}</span>
@@ -99,7 +100,7 @@ function Editor({ scene }: { scene: Scene }) {
     const dragged = e.active.rect.current.translated
     const y = pointerY ?? (dragged ? dragged.top + dragged.height / 2 : over.rect.top)
     const lowerHalf = y > over.rect.top + over.rect.height / 2
-    const height = dragging.kind === 'palette' ? blockHeight(createBlock(dragging.entry.type)) : dragHeight(scene.blocks, dragging.id)
+    const height = dragging.kind === 'palette' ? (dragging.entry.kit ? 1 : blockHeight(createBlock(dragging.entry.type as CreatableBlockType))) : dragHeight(scene.blocks, dragging.id)
     const next = resolveDrop(scene.blocks, String(over.id), lowerHalf, height, dragging.kind === 'block' ? dragging.id : null)
     setDrop((prev) =>
       prev && next && prev.listKey === next.listKey && prev.index === next.index && prev.fits === next.fits ? prev : next

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, ChevronRight, PanelRightClose, PanelRightOpen, Pencil, RotateCcw } from 'lucide-react'
 import type { Id, Project } from '@shared/model'
-import { CODE_BLOCK_NOTICE, CODE_ENDING_NOTICE, CODE_ENDING_TITLE, start, step, type PlayInput, type PlayState } from '@shared/interpreter'
+import { CODE_BLOCK_NOTICE, CODE_ENDING_NOTICE, CODE_ENDING_TITLE, KIT_ENDING_NOTICE, kitBlockNotice, kitEndingTitle, start, step, type PlayInput, type PlayState } from '@shared/interpreter'
 import { buildNameTable } from '@shared/naming'
 import { dialogueFor, variableResolver } from '@shared/stageView'
 import { api } from '../../api'
 import { Button } from '../../components/Button'
 import { Stage } from '../../components/Stage'
+import { useKitStore } from '../../store/kitStore'
 import { useProjectStore } from '../../store/projectStore'
 import { useUiStore } from '../../store/uiStore'
 import './playtest.css'
@@ -117,6 +118,8 @@ function useQuickPlayAudio(project: Project, dir: string | null, state: PlayStat
 function Run({ project, dir, fromSceneId, onRestart }: { project: Project; dir: string | null; fromSceneId: Id | null; onRestart: () => void }) {
   const [state, setState] = useState<PlayState>(() => start(project, fromSceneId))
   const [panelOpen, setPanelOpen] = useState(true)
+  const kits = useKitStore((s) => s.kits)
+  const kitName = (id: string): string => kits.find((k) => k.id === id)?.manifest?.name ?? id
   const stateRef = useRef(state)
   stateRef.current = state
 
@@ -156,11 +159,17 @@ function Run({ project, dir, fromSceneId, onRestart }: { project: Project; dir: 
         e.preventDefault()
         close()
       } else if (e.key === ' ' || e.key === 'Enter') {
-        if (s.menu || s.codeExits) return
+        if (s.menu || s.codeExits || s.kitEnding) return
         e.preventDefault()
         send({ type: 'advance' })
       } else if (/^[1-9]$/.test(e.key) && s.codeExits) {
         const exit = s.codeExits[Number(e.key) - 1]
+        if (exit) {
+          e.preventDefault()
+          send({ type: 'exit', exitId: exit.id })
+        }
+      } else if (/^[1-9]$/.test(e.key) && s.kitEnding) {
+        const exit = s.kitEnding.exits[Number(e.key) - 1]
         if (exit) {
           e.preventDefault()
           send({ type: 'exit', exitId: exit.id })
@@ -181,7 +190,7 @@ function Run({ project, dir, fromSceneId, onRestart }: { project: Project; dir: 
   const sceneName = state.sceneId ? (project.scenes[state.sceneId]?.name ?? '') : ''
   const dialogue = state.line ? dialogueFor(project, state.line.characterId, state.line.text) : null
   const waitingForClick =
-    state.status === 'running' && !state.menu && !state.codeExits && !state.ask && (state.line !== null || state.movie !== null || (state.pause !== null && state.pause.seconds === null))
+    state.status === 'running' && !state.menu && !state.codeExits && !state.kitEnding && !state.ask && (state.line !== null || state.movie !== null || (state.pause !== null && state.pause.seconds === null))
   const refs = useMemo(() => buildNameTable(project).variableRefs, [project])
 
   return (
@@ -244,6 +253,19 @@ function Run({ project, dir, fromSceneId, onRestart }: { project: Project; dir: 
               </div>
             </div>
           )}
+          {state.status === 'running' && state.kitEnding && (
+            <div className="playtest-code-ending" role="group" aria-label={kitEndingTitle(kitName(state.kitEnding.kitId))} data-testid="kit-ending-panel">
+              <h2>{kitEndingTitle(kitName(state.kitEnding.kitId))}</h2>
+              <p className="playtest-notice">{KIT_ENDING_NOTICE}</p>
+              <div className="playtest-code-exits">
+                {state.kitEnding.exits.map((x) => (
+                  <Button key={x.id} variant="primary" onClick={() => send({ type: 'exit', exitId: x.id })}>
+                    {x.text}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
           {waitingForClick && <div className="playtest-hint">Click, Space or Enter to continue</div>}
           {state.status === 'ended' && (
             <div className="playtest-end" role="status">
@@ -283,6 +305,16 @@ function Run({ project, dir, fromSceneId, onRestart }: { project: Project; dir: 
                 <p className="playtest-notice" data-testid="code-notice">
                   {CODE_BLOCK_NOTICE}
                 </p>
+              </section>
+            )}
+            {state.skippedKits.length > 0 && (
+              <section>
+                <h3>Kits</h3>
+                {state.skippedKits.map((id) => (
+                  <p key={id} className="playtest-notice" data-testid="kit-notice">
+                    {kitBlockNotice(kitName(id))}
+                  </p>
+                ))}
               </section>
             )}
             <section>

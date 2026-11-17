@@ -4,7 +4,11 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { compileProject } from '../src/shared/compiler'
 import type { Project } from '../src/shared/model'
-import { exportProject, setConfigName } from '../src/main/exporter'
+import { exportProject as exportWithOptions, setConfigName } from '../src/main/exporter'
+import type { ExportOptions } from '../src/main/exporter'
+import { builtInKits } from './helpers/kits'
+
+const exportProject = (editorDir: string, project: Project, options: ExportOptions = {}) => exportWithOptions(editorDir, project, { kits: builtInKits(), ...options })
 
 const TEMPLATE_OPTIONS = 'define config.name = _("Old Name")\n\ndefine gui.show_name = True\n'
 const TEMPLATE_GUI = 'define gui.accent_color = "#7c9cff"\n'
@@ -31,7 +35,7 @@ function removeScenes(project: Project, ids: string[]): Project {
       for (const c of s.ending.cases) c.target = fix(c.target)
       s.ending.elseTarget = fix(s.ending.elseTarget)
     }
-    if (s.ending.type === 'code') for (const x of s.ending.exits) x.target = fix(x.target)
+    if (s.ending.type === 'code' || s.ending.type === 'kit') for (const x of s.ending.exits) x.target = fix(x.target)
   }
   return next
 }
@@ -108,7 +112,7 @@ describe('exportProject', () => {
     const project = ready(fixture())
     const result = exportProject(editor, project)
     expect(result.ok).toBe(true)
-    const compiled = compileProject(project)
+    const compiled = compileProject(project, { kits: builtInKits() })
     for (const f of compiled.files) {
       expect(readFileSync(join(renpy, 'game', f.path), 'utf8')).toBe(f.content)
     }

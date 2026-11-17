@@ -1,4 +1,5 @@
 import type { Id, Project } from '../model'
+import type { KitContext } from '../kits/types'
 import { compileProject, type CompileResult } from './index'
 
 /**
@@ -24,6 +25,6 @@ export function sceneScriptFrom(result: CompileResult, sceneId: Id): { file: str
 }
 
 /** The script of one scene, compiled from the project as it is now. */
-export function compileSceneScript(project: Project, sceneId: Id): string | null {
-  return sceneScriptFrom(compileProject(project), sceneId)?.text ?? null
+export function compileSceneScript(project: Project, sceneId: Id, context: KitContext = {}): string | null {
+  return sceneScriptFrom(compileProject(project, context), sceneId)?.text ?? null
 }

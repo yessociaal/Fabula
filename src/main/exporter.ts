@@ -13,7 +13,9 @@ import { dirname, isAbsolute, join } from 'node:path'
 import { compileProject } from '@shared/compiler'
 import { pythonString } from '@shared/compiler/text'
 import type { ExportResult } from '@shared/ipc'
+import type { LoadedKit } from '@shared/kits/types'
 import type { Project } from '@shared/model'
+import { listKits } from './kits'
 import { validateProject } from '@shared/validate'
 
 export const MANIFEST_FILE = 'export-manifest.json'
@@ -25,6 +27,10 @@ const PROTECTED = new Set(['gui.rpy', 'screens.rpy', 'options.rpy'])
 export interface ExportOptions {
   /** Injected so tests get a fixed backup folder name. */
   now?: () => Date
+  /** The kits the story can use. When left out they are read from the story's kits folder and builtInKitsDir. */
+  kits?: LoadedKit[]
+  /** Where the kits that come with the app are. */
+  builtInKitsDir?: string
 }
 
 const timestamp = (d: Date): string => {
@@ -89,7 +95,8 @@ export function setConfigName(optionsText: string, title: string): string | null
  */
 export function exportProject(editorDir: string, project: Project, options: ExportOptions = {}): ExportResult {
   // 1. validate
-  const problems = validateProject(project)
+  const kits = options.kits ?? listKits(editorDir, options.builtInKitsDir ?? '')
+  const problems = validateProject(project, { kits })
   const errors = problems.filter((p) => p.severity === 'error')
   if (errors.length > 0) {
     return {
@@ -104,7 +111,7 @@ export function exportProject(editorDir: string, project: Project, options: Expo
   if (!existsSync(gameDir)) return { ok: false, error: `"${renpyDir}" does not contain a Ren'Py game (no game folder).` }
 
   // 2. compile
-  const result = compileProject(project)
+  const result = compileProject(project, { kits })
   const outputs = new Map<string, { kind: 'text'; content: Buffer } | { kind: 'asset'; from: string }>()
   for (const f of result.files) {
     const rel = safeRelative(f.path)
