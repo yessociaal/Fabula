@@ -7,6 +7,7 @@ import {
   Home as HomeIcon,
   LayoutPanelTop,
   Map as MapIcon,
+  Palette,
   Puzzle,
   Play,
   Redo2,
@@ -38,6 +39,7 @@ import Kits from '../Kits/Kits'
 import ScreenDesigner from '../ScreenDesigner/ScreenDesigner'
 import { useKitContext } from '../../store/kitStore'
 import { ProblemsDrawer } from '../Problems/ProblemsDrawer'
+import Look from '../Look/Look'
 import Settings from '../Settings/Settings'
 import { RenpyDialogs } from './RenpyDialogs'
 
@@ -48,6 +50,7 @@ const RAIL: { view: View; label: string; icon: ReactNode; empty: string }[] = [
   { view: 'variables', label: 'Variables', icon: <Sigma size={20} />, empty: 'The variables view arrives in a later step.' },
   { view: 'scripts', label: 'Script files', icon: <FileCode size={20} />, empty: 'The script files view arrives in a later step.' },
   { view: 'screens', label: 'Screens', icon: <LayoutPanelTop size={20} />, empty: 'The screen designer arrives in a later step.' },
+  { view: 'look', label: 'Look', icon: <Palette size={20} />, empty: 'The look and feel view arrives in a later step.' },
   { view: 'kits', label: 'Kits', icon: <Puzzle size={20} />, empty: 'The kits view arrives in a later step.' },
   { view: 'settings', label: 'Settings', icon: <SettingsIcon size={20} />, empty: 'The settings view arrives in a later step.' }
 ]
@@ -228,6 +231,8 @@ export default function Shell() {
             <ScriptFiles />
           ) : view === 'screens' ? (
             <ScreenDesigner />
+          ) : view === 'look' ? (
+            <Look />
           ) : view === 'kits' ? (
             <Kits />
           ) : view === 'settings' ? (

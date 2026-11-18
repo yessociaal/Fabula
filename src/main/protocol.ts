@@ -10,7 +10,7 @@ export function registerAssetScheme(): void {
   protocol.registerSchemesAsPrivileged([
     {
       scheme: ASSET_SCHEME,
-      privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true }
+      privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true }
     }
   ])
 }
@@ -38,7 +38,12 @@ export function registerAssetProtocolHandler(): void {
     const parsed = parseAssetUrl(request.url)
     const target = parsed ? resolveAssetPath(parsed.dir, parsed.file) : null
     if (!target) return new Response('Not found', { status: 404 })
-    return net.fetch(pathToFileURL(target).toString())
+    // A font is fetched with CORS, so the answer says any page of the app may read it.
+    return net.fetch(pathToFileURL(target).toString()).then((res) => {
+      const headers = new Headers(res.headers)
+      headers.set('Access-Control-Allow-Origin', '*')
+      return new Response(res.body, { status: res.status, statusText: res.statusText, headers })
+    })
   })
 }
 

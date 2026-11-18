@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Id } from '@shared/model'
 
-export type View = 'map' | 'scene' | 'characters' | 'assets' | 'variables' | 'scripts' | 'kits' | 'screens' | 'settings'
+export type View = 'map' | 'scene' | 'characters' | 'assets' | 'variables' | 'scripts' | 'kits' | 'screens' | 'look' | 'settings'
 
 export interface UiState {
   view: View

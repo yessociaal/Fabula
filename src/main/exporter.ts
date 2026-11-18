@@ -33,7 +33,7 @@ export interface ExportOptions {
   builtInKitsDir?: string
 }
 
-const timestamp = (d: Date): string => {
+export const timestamp = (d: Date): string => {
   const p = (n: number, w = 2): string => String(n).padStart(w, '0')
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`
 }

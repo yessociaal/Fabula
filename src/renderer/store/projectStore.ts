@@ -87,6 +87,10 @@ export interface ProjectState {
   updateMeta(patch: Partial<Project['meta']>): void
   /** Link (or unlink) the Ren'Py game this story exports into. */
   setRenpyProjectDir(dir: string | null): void
+  /** Look & Feel: remember a value (keyed by the Ren'Py define name; for a font or picture, the id of the asset), so it can be applied again to a new game. */
+  setLookValue(key: string, value: string): void
+  /** Look & Feel: forget a value. */
+  resetLookValue(key: string): void
 
   addScene(position: Position, name?: string): Id
   renameScene(sceneId: Id, name: string): void
@@ -317,6 +321,16 @@ export const useProjectStore = create<ProjectState>()(
         setRenpyProjectDir(dir) {
           mutate((p) => {
             p.renpyProjectDir = dir
+          })
+        },
+        setLookValue(key, value) {
+          mutate((p) => {
+            p.look[key] = value
+          })
+        },
+        resetLookValue(key) {
+          mutate((p) => {
+            delete p.look[key]
           })
         },
 

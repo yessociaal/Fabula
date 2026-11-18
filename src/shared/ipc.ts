@@ -1,6 +1,7 @@
 import type { Asset, Id, Project } from './model'
 import type { LoadedKit } from './kits/types'
 import type { Problem } from './validate'
+import type { ApplyLookResult, LookReadEntry, LookUpload } from './look'
 
 export interface RecentEntry {
   path: string
@@ -62,6 +63,18 @@ export interface Api {
   revealInExplorer(path: string): Promise<void>
   /** The kits available to a story: the built-in ones plus the ones in <editorProject>/kits. A kit that cannot be read comes back with its error. */
   listKits(dir: string): Promise<LoadedKit[]>
+  /** The Look & Feel fields as they are in the Ren'Py game's gui.rpy, options.rpy and gui/ folder right now. */
+  readLook(projectDir: string): Promise<LookReadEntry[]>
+  /**
+   * Write the given Look & Feel values into the game: one line each in gui.rpy / options.rpy, or a copied file. `values` holds the values of
+   * line fields (a colour, number, text); `uploads` the files for font and picture fields. Fields not mentioned are not touched.
+   */
+  applyLook(
+    projectDir: string,
+    editorDir: string,
+    values: Record<string, string>,
+    uploads: Record<string, LookUpload>
+  ): Promise<ApplyLookResult>
   /** Not in the original plan list: a game that crashed after it had started (main pushes it). Returns an unsubscribe function. */
   onRenpyError(listener: (error: string) => void): () => void
 }
@@ -87,7 +100,9 @@ export const ASYNC_API_METHODS = [
   'renpyLint',
   'renpyDistribute',
   'revealInExplorer',
-  'listKits'
+  'listKits',
+  'readLook',
+  'applyLook'
 ] as const satisfies readonly ApiMethod[]
 
 /** vnasset://p/<encoded dir>/<encoded file segments>. Pure string building, safe in every process. */

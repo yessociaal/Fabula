@@ -13,6 +13,7 @@ import {
   type ReadImageSize
 } from './projectFiles'
 import { exportProject } from './exporter'
+import { applyLook, readLook } from './look'
 import { builtInKitsDir, listKits } from './kits'
 import { createProject, distribute, lint, runGame } from './renpy'
 import {
@@ -154,6 +155,13 @@ export function registerIpc(): void {
 
     async listKits(dir) {
       return listKits(dir, kitsDir())
+    },
+
+    async readLook(projectDir) {
+      return readLook(projectDir)
+    },
+    async applyLook(projectDir, editorDir, values, uploads) {
+      return applyLook(projectDir, editorDir, values, uploads)
     },
 
     async revealInExplorer(path) {

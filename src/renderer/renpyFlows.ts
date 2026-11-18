@@ -10,6 +10,7 @@ import { joinPath, safeFolderName } from './pathUtil'
 import { flushAutosave } from './store/autosave'
 import { useProjectStore } from './store/projectStore'
 import { useUiStore } from './store/uiStore'
+import { applyStoredLook } from './lookApply'
 
 export { storyHasCode }
 
@@ -176,5 +177,7 @@ export async function createRenpyGame(
   const result = await api.renpyCreateProject(target, { width: meta.width, height: meta.height, accent: meta.accentColor })
   if (!result.ok) return { ok: false, error: result.error ?? "Ren'Py could not create the game." }
   useProjectStore.getState().setRenpyProjectDir(target)
+  // A story that already has Look & Feel values gets them in the new game at once.
+  if (Object.keys(useProjectStore.getState().project?.look ?? {}).length > 0) await applyStoredLook()
   return { ok: true }
 }
