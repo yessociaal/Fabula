@@ -1,15 +1,15 @@
 import type { RefObject } from 'react'
 import { useStore } from '@xyflow/react'
-import { Layers, Maximize, Minus, Plus, Search, Wand2 } from 'lucide-react'
+import { Maximize, Minus, Plus, Search, Wand2 } from 'lucide-react'
 import { Button } from '../../components/Button'
 import { IconButton } from '../../components/IconButton'
 import { useMapUi } from './mapUi'
+import { ChaptersPopover } from './ChaptersPopover'
 
 interface MapToolbarProps {
   searchRef: RefObject<HTMLInputElement | null>
   matchCount: number
   onAddScene(): void
-  onAddChapter(): void
   onTidy(): void
   onZoomIn(): void
   onZoomOut(): void
@@ -28,9 +28,7 @@ export function MapToolbar(props: MapToolbarProps) {
       <Button icon={<Plus size={16} />} onClick={props.onAddScene} title="Add a scene in the middle of the view">
         Scene
       </Button>
-      <Button icon={<Layers size={16} />} onClick={props.onAddChapter} title="Add a coloured chapter">
-        Chapter
-      </Button>
+      <ChaptersPopover />
       <Button icon={<Wand2 size={16} />} onClick={props.onTidy} title="Lay the scenes out left to right by distance from the start">
         Tidy up
       </Button>

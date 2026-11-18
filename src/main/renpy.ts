@@ -33,7 +33,8 @@ function runToExit(
   sdkDir: string,
   args: string[],
   deps: RenpyDeps | undefined,
-  timeoutMs: number
+  timeoutMs: number,
+  env?: Record<string, string>
 ): Promise<{ code: number | null; error?: string }> {
   return new Promise((resolve) => {
     const spawn = deps?.spawn ?? defaultSpawn
@@ -47,7 +48,7 @@ function runToExit(
     }
     let child: ChildLike
     try {
-      child = spawn(renpyExe(sdkDir), args, { cwd: sdkDir, windowsHide: true, stdio: 'ignore' })
+      child = spawn(renpyExe(sdkDir), args, { cwd: sdkDir, windowsHide: true, stdio: 'ignore', ...(env ? { env: { ...process.env, ...env } } : {}) })
     } catch (e) {
       done({ code: null, error: e instanceof Error ? e.message : String(e) })
       return
@@ -107,6 +108,14 @@ export async function createProject(
   if (result.error) return { ok: false, error: result.error }
   if (result.code !== 0 || !existsSync(join(targetDir, 'game'))) {
     return { ok: false, error: `Ren'Py could not create the game (exit code ${result.code}).` }
+  }
+  // generate_gui only writes part of the interface pictures. The Ren'Py launcher then runs the game's own gui_images command
+  // (once for phones, once for desktop) to draw the button and bar pictures; without them the main menu and the game menu crash.
+  for (const env of [{ RENPY_VARIANT: 'small phone' }, undefined]) {
+    const pictures = await runToExit(sdkDir, [targetDir, 'gui_images'], deps, 240000, env)
+    if (pictures.error || pictures.code !== 0) {
+      return { ok: false, error: pictures.error ?? `Ren'Py made the game but could not draw its menu button pictures (exit code ${pictures.code}).` }
+    }
   }
   return { ok: true }
 }

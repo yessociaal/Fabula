@@ -412,3 +412,87 @@ button:disabled:hover {
   left: auto;
   right: 100%;
 }
+
+/* First-run hint cards */
+.hint-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 340px;
+  padding: 10px 10px 10px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.hint-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hint-card-text strong {
+  color: var(--text);
+}
+
+.hint-card-map {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 5;
+}
+
+.hint-card-scene {
+  margin: 8px 12px 0;
+  max-width: none;
+}
+
+/* Keyboard shortcuts modal */
+.shortcut-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 60vh;
+  overflow: auto;
+  min-width: 460px;
+}
+
+.shortcut-title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.shortcut-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.shortcut-row {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.shortcut-row dt,
+.shortcut-row dd {
+  margin: 0;
+}
+
+.shortcut-row kbd {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 2px 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}

@@ -9,6 +9,8 @@ export const MAX_RECENT = 10
 export interface StoredSettings {
   sdkDir: string | null
   recent: RecentEntry[]
+  /** Hint cards the user closed. Left out of the file while empty. */
+  dismissedHints?: string[]
 }
 
 const samePath = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase()
@@ -17,6 +19,11 @@ const samePath = (a: string, b: string): boolean => a.toLowerCase() === b.toLowe
 export function addRecent(recent: RecentEntry[], entry: RecentEntry): RecentEntry[] {
   const rest = recent.filter((r) => !samePath(r.path, entry.path))
   return [entry, ...rest].slice(0, MAX_RECENT)
+}
+
+/** Add a hint id to the list of closed hint cards (no duplicates). */
+export function addDismissedHint(hints: string[] | undefined, id: string): string[] {
+  return hints?.includes(id) ? hints : [...(hints ?? []), id]
 }
 
 export function removeRecent(recent: RecentEntry[], path: string): RecentEntry[] {
@@ -42,6 +49,10 @@ export function parseStoredSettings(raw: unknown): StoredSettings {
       })
     }
     out.recent = normaliseRecent(entries)
+  }
+  if (Array.isArray(obj.dismissedHints)) {
+    const ids = [...new Set(obj.dismissedHints.filter((h): h is string => typeof h === 'string' && h !== ''))]
+    if (ids.length > 0) out.dismissedHints = ids
   }
   return out
 }

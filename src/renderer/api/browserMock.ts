@@ -38,6 +38,7 @@ const MOCK_SDK = "C:\\Users\\you\\Documents\\Ren'py\\renpy-8.4.1-sdk"
 interface StoredSettings {
   sdkDir: string | null
   recent: RecentEntry[]
+  dismissedHints?: string[]
 }
 
 function readJson<T>(key: string, fallback: T): T {
@@ -188,7 +189,11 @@ if (typeof window !== 'undefined') {
 export const browserMock: Api = {
   async getSettings(): Promise<Settings> {
     const s = getStored()
-    return { sdkDir: s.sdkDir, sdkVersion: s.sdkDir ? '8.4.1' : null, recent: s.recent }
+    return { sdkDir: s.sdkDir, sdkVersion: s.sdkDir ? '8.4.1' : null, recent: s.recent, dismissedHints: s.dismissedHints ?? [] }
+  },
+  async dismissHint(id) {
+    const s = getStored()
+    if (!(s.dismissedHints ?? []).includes(id)) putStored({ ...s, dismissedHints: [...(s.dismissedHints ?? []), id] })
   },
   async setSdkDir(dir) {
     if (!dir.trim()) return { ok: false, error: 'renpy.exe was not found in that folder.' }
@@ -315,5 +320,14 @@ export const browserMock: Api = {
   },
   onRenpyError() {
     return () => undefined
+  },
+  onCloseRequested() {
+    return () => undefined
+  },
+  async confirmClose() {
+    // a browser tab is closed by the browser
+  },
+  async cancelClose() {
+    // nothing is waiting
   }
 }

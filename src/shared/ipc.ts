@@ -14,6 +14,8 @@ export interface Settings {
   /** Version of the SDK in sdkDir, read when settings are requested. Not stored on disk. */
   sdkVersion: string | null
   recent: RecentEntry[]
+  /** Ids of the first-run hint cards the user has closed. */
+  dismissedHints: string[]
 }
 
 export interface RunResult {
@@ -35,12 +37,16 @@ export interface ExportResult {
 
 /** Pushed from the main process to the renderer. */
 export const RENPY_ERROR_EVENT = 'renpy:error'
+/** Pushed when the user closes the window: the renderer saves, then calls confirmClose (or keeps the window open). */
+export const CLOSE_REQUEST_EVENT = 'app:close-requested'
 
 export interface Api {
   getSettings(): Promise<Settings>
   setSdkDir(dir: string): Promise<{ ok: boolean; version?: string; error?: string }>
   /** Not in the original plan list: needed for the Home screen's "Remove from list". */
   removeRecent(path: string): Promise<void>
+  /** Remember that a first-run hint card was closed (stored in the app settings). */
+  dismissHint(id: string): Promise<void>
   pickFolder(title: string): Promise<string | null>
   pickFiles(kind: Asset['kind']): Promise<string[]>
 
@@ -77,6 +83,12 @@ export interface Api {
   ): Promise<ApplyLookResult>
   /** Not in the original plan list: a game that crashed after it had started (main pushes it). Returns an unsubscribe function. */
   onRenpyError(listener: (error: string) => void): () => void
+  /** The window is being closed. The listener must save the story and then call confirmClose, or do nothing to keep the window open. */
+  onCloseRequested(listener: () => void): () => void
+  /** Close the window now (after the story was saved, or the user chose to close without saving). */
+  confirmClose(): Promise<void>
+  /** The story could not be saved and the user chose to keep working: stop waiting to close. */
+  cancelClose(): Promise<void>
 }
 
 export type ApiMethod = keyof Api
@@ -86,6 +98,7 @@ export const ASYNC_API_METHODS = [
   'getSettings',
   'setSdkDir',
   'removeRecent',
+  'dismissHint',
   'pickFolder',
   'pickFiles',
   'createEditorProject',
@@ -102,7 +115,9 @@ export const ASYNC_API_METHODS = [
   'revealInExplorer',
   'listKits',
   'readLook',
-  'applyLook'
+  'applyLook',
+  'confirmClose',
+  'cancelClose'
 ] as const satisfies readonly ApiMethod[]
 
 /** vnasset://p/<encoded dir>/<encoded file segments>. Pure string building, safe in every process. */

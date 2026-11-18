@@ -106,5 +106,32 @@ export const CHAPTER_PALETTE = ['#7c9cff', '#5fd08a', '#f2b84b', '#ff8a65', '#c7
 /** Name ("Chapter N") and colour (fixed palette, cycling) for the next chapter. */
 export function nextChapter(project: Project): { name: string; color: string } {
   const n = project.chapterOrder.length
-  return { name: `Chapter ${n + 1}`, color: CHAPTER_PALETTE[n % CHAPTER_PALETTE.length] }
+  const taken = new Set(Object.values(project.chapters).map((c) => c.name.trim().toLowerCase()))
+  let number = n + 1
+  while (taken.has(`chapter ${number}`)) number++
+  return { name: `Chapter ${number}`, color: CHAPTER_PALETTE[n % CHAPTER_PALETTE.length] }
+}
+
+/**
+ * True when two versions of the project differ at most in where scenes sit on the map. Dragging a card rewrites the project on every
+ * mouse move, but nothing the problem check or the arrows depend on changes then, so they are not recomputed. Relies on the store
+ * keeping unchanged parts as the same objects (immer does).
+ */
+export function sameExceptPositions(a: Project, b: Project): boolean {
+  if (a === b) return true
+  for (const key of Object.keys(a) as (keyof Project)[]) {
+    if (key !== 'scenes' && a[key] !== b[key]) return false
+  }
+  const ids = Object.keys(a.scenes)
+  if (ids.length !== Object.keys(b.scenes).length) return false
+  for (const id of ids) {
+    const x = a.scenes[id]
+    const y = b.scenes[id]
+    if (!y) return false
+    if (x === y) continue
+    for (const key of Object.keys(x) as (keyof typeof x)[]) {
+      if (key !== 'position' && x[key] !== y[key]) return false
+    }
+  }
+  return true
 }

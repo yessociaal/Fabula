@@ -263,7 +263,7 @@ export default function Assets() {
           <p className="hint">
             {needle
               ? 'Nothing matches that filter.'
-              : `Drop ${ALLOWED_EXTENSIONS[tab].join(' ')} files here, or use Upload.`}
+              : `No ${TABS.find((t) => t.id === tab)?.label.toLowerCase() ?? 'files'} yet. Drop ${ALLOWED_EXTENSIONS[tab].join(' ')} files here, or press Upload.`}
           </p>
         )}
         {isImageKind(tab) ? (

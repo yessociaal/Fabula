@@ -349,3 +349,99 @@
   font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
   font-size: 12px;
 }
+
+.map-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.chapters-popover {
+  min-width: 340px;
+}
+
+.chapter-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.chapter-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chapter-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.chapter-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.chapter-count {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.chapter-colors {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 22px;
+}
+
+.chapter-swatch {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.chapter-swatch.selected {
+  border-color: var(--text);
+}
+
+.chapter-custom {
+  width: 28px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: none;
+  cursor: pointer;
+}
+
+/* Zoomed far out (see LOW_DETAIL_ZOOM): keep the card boxes and their dots, skip painting the text and arrow labels. */
+.story-map.low-detail .scene-thumb,
+.story-map.low-detail .scene-line,
+.story-map.low-detail .scene-meta,
+.story-map.low-detail .exit-text,
+.story-map.low-detail .if-tag {
+  visibility: hidden;
+}
+
+.story-map.low-detail .react-flow__edge-textwrapper,
+.story-map.low-detail .react-flow__edge-text,
+.story-map.low-detail .react-flow__edge-textbg,
+.story-map.low-detail .react-flow__edgelabel-renderer {
+  display: none;
+}
+
+.story-map .scene-card {
+  contain: layout style;
+}

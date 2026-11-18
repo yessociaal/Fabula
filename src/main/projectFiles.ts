@@ -160,6 +160,42 @@ export async function importAssetData(
   return finishAsset(dir, kind, fileName, ext, id, dest, readImageSize)
 }
 
+/** Every asset file (relative to <dir>/assets, forward slashes, lower case) that some asset record of the project points at. */
+export function referencedAssetFiles(project: Project): Set<string> {
+  return new Set(Object.values(project.assets).map((a) => a.file.split('\\').join('/').toLowerCase()))
+}
+
+/**
+ * Delete the files under <dir>/assets that no asset record points at (left behind by "Replace file…" and by deleted assets, which keep
+ * their file so that Undo can bring the old picture back). Run when a story is opened, when the undo history is empty, so nothing the
+ * user could still undo to is touched. Only files in the asset folders Fabula creates are considered. Returns the removed paths.
+ */
+export async function collectUnusedAssetFiles(dir: string, project: Project): Promise<string[]> {
+  const keep = referencedAssetFiles(project)
+  const removed: string[] = []
+  for (const folder of new Set(Object.values(ASSET_FOLDERS))) {
+    let names: string[]
+    try {
+      names = await readdir(join(dir, 'assets', folder))
+    } catch {
+      continue
+    }
+    for (const name of names) {
+      const rel = `${folder}/${name}`
+      const target = resolveAssetPath(dir, rel)
+      if (!target || keep.has(rel.toLowerCase())) continue
+      try {
+        if (!(await stat(target)).isFile()) continue
+        await rm(target, { force: true })
+        removed.push(rel)
+      } catch {
+        // leave anything that cannot be removed
+      }
+    }
+  }
+  return removed
+}
+
 export async function deleteAssetFile(dir: string, file: string): Promise<void> {
   const target = resolveAssetPath(dir, file)
   if (!target) throw new Error('That file is not inside the story\'s assets folder.')

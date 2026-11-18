@@ -18,6 +18,7 @@ import { createBlock } from '@shared/factory'
 import type { CreatableBlockType, Id, Scene } from '@shared/model'
 import { Button } from '../../components/Button'
 import { EmptyState } from '../../components/EmptyState'
+import { HintCard } from '../../components/HintCard'
 import { useProjectStore } from '../../store/projectStore'
 import { useUiStore } from '../../store/uiStore'
 import './sceneEditor.css'
@@ -132,6 +133,9 @@ function Editor({ scene }: { scene: Scene }) {
         <DndContext sensors={sensors} collisionDetection={collide} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={finish}>
           <Palette sceneId={scene.id} />
           <main className="scene-centre">
+            <HintCard id="scene" title="Writing a scene" className="hint-card-scene">
+              Click a block on the left to add it, or drag it into the list. The ending below says where the scene goes next. Press ? for all shortcuts.
+            </HintCard>
             <BlockList scene={scene} project={project} drop={drop} />
             <EndingPanel scene={scene} />
           </main>

@@ -226,6 +226,22 @@ function eachBlock(blocks: Block[], fn: (b: Block) => void): void {
   })
 }
 
+/** Kit forms keep picked assets as plain id strings (also inside lists): empty every string that is exactly this id. */
+function clearIdInValue(value: unknown, id: Id): void {
+  if (Array.isArray(value)) {
+    value.forEach((item, i) => {
+      if (item === id) value[i] = ''
+      else clearIdInValue(item, id)
+    })
+  } else if (value && typeof value === 'object') {
+    const obj = value as Record<string, unknown>
+    for (const key of Object.keys(obj)) {
+      if (obj[key] === id) obj[key] = ''
+      else clearIdInValue(obj[key], id)
+    }
+  }
+}
+
 function forEachBlock(project: Project, fn: (b: Block) => void): void {
   for (const s of Object.values(project.scenes)) eachBlock(s.blocks, fn)
 }
@@ -336,7 +352,14 @@ export const useProjectStore = create<ProjectState>()(
 
         // ----- scenes -----
         addScene(position, name) {
-          const scene = createScene(position, name)
+          // A scene added without a name is "New scene", then "New scene 2", "New scene 3"… so cards can be told apart.
+          let chosen = name
+          if (chosen === undefined) {
+            const taken = new Set(Object.values(useProjectStore.getState().project?.scenes ?? {}).map((s) => s.name.trim().toLowerCase()))
+            chosen = 'New scene'
+            for (let n = 2; taken.has(chosen.toLowerCase()); n++) chosen = `New scene ${n}`
+          }
+          const scene = createScene(position, chosen)
           mutate((p) => {
             p.scenes[scene.id] = scene
           })
@@ -867,6 +890,12 @@ export const useProjectStore = create<ProjectState>()(
                 }
               }
             }
+            for (const s of Object.values(p.scenes)) {
+              if (s.ending.type === 'kit') clearIdInValue(s.ending.params, assetId)
+            }
+            forEachBlock(p, (b) => {
+              if (b.type === 'kit') clearIdInValue(b.params, assetId)
+            })
             delete p.assets[assetId]
           })
         },

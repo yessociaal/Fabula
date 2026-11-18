@@ -4,6 +4,7 @@ import { basename } from 'node:path'
 import type { Asset, Project } from '@shared/model'
 import { RENPY_ERROR_EVENT, type Api, type Settings } from '@shared/ipc'
 import {
+  collectUnusedAssetFiles,
   createEditorProject,
   deleteAssetFile,
   importAsset,
@@ -13,10 +14,12 @@ import {
   type ReadImageSize
 } from './projectFiles'
 import { exportProject } from './exporter'
+import { closeGuard } from './closeGuard'
 import { applyLook, readLook } from './look'
 import { builtInKitsDir, listKits } from './kits'
 import { createProject, distribute, lint, runGame } from './renpy'
 import {
+  addDismissedHint,
   addRecent,
   checkSdkDir,
   loadSettings,
@@ -66,10 +69,10 @@ export function registerIpc(): void {
     save(s)
   }
 
-  const handlers: { [K in keyof Omit<Api, 'assetUrl' | 'onRenpyError'>]: (...args: Parameters<Api[K]>) => ReturnType<Api[K]> } = {
+  const handlers: { [K in keyof Omit<Api, 'assetUrl' | 'onRenpyError' | 'onCloseRequested'>]: (...args: Parameters<Api[K]>) => ReturnType<Api[K]> } = {
     async getSettings(): Promise<Settings> {
       const s = load()
-      return { sdkDir: s.sdkDir, sdkVersion: s.sdkDir ? readSdkVersion(s.sdkDir) : null, recent: s.recent }
+      return { sdkDir: s.sdkDir, sdkVersion: s.sdkDir ? readSdkVersion(s.sdkDir) : null, recent: s.recent, dismissedHints: s.dismissedHints ?? [] }
     },
     async setSdkDir(dir) {
       const result = checkSdkDir(dir)
@@ -85,7 +88,21 @@ export function registerIpc(): void {
       s.recent = removeRecent(s.recent, path)
       save(s)
     },
+    async confirmClose() {
+      closeGuard.confirm(BrowserWindow.getAllWindows())
+    },
+    async cancelClose() {
+      closeGuard.cancel()
+    },
+    async dismissHint(id) {
+      const s = load()
+      s.dismissedHints = addDismissedHint(s.dismissedHints, id)
+      save(s)
+    },
     async pickFolder(title) {
+      // Test hook for scripts/test-electron.mjs: the native folder dialog cannot be driven, so a test run
+      // (FABULA_TEST=1) may answer it from the environment. Without FABULA_TEST=1 this line does nothing.
+      if (process.env['FABULA_TEST'] === '1' && process.env['FABULA_TEST_FOLDER']) return process.env['FABULA_TEST_FOLDER']
       const win = parentWindow()
       const options: Electron.OpenDialogOptions = { title, properties: ['openDirectory', 'createDirectory'] }
       const result = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options)
@@ -109,6 +126,8 @@ export function registerIpc(): void {
     },
     async openEditorProject(dir) {
       const result = await openEditorProject(dir)
+      // The undo history is empty now, so files that no asset points at any more can go.
+      await collectUnusedAssetFiles(result.dir, result.project).catch(() => [])
       rememberRecent(result.dir, result.project)
       return result
     },

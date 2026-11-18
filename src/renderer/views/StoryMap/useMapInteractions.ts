@@ -19,7 +19,7 @@ import { toast } from '../../components/Toast'
 import { pauseHistory, resumeHistory, useProjectStore } from '../../store/projectStore'
 import { useUiStore } from '../../store/uiStore'
 import { distancesFromStart, sceneCardHeight, tidyLayout, CARD_WIDTH } from './layout'
-import { ARROW_LABEL_MAX, countArrowsInto, matchingSceneIds, nextChapter, truncate } from './mapModel'
+import { ARROW_LABEL_MAX, countArrowsInto, matchingSceneIds, sameExceptPositions, truncate } from './mapModel'
 import { useMapUi } from './mapUi'
 import type { SceneFlowNode, SceneNodeData } from './SceneNode'
 
@@ -92,11 +92,21 @@ export function useMapInteractions(wrapperRef: RefObject<HTMLDivElement | null>,
 
   // ----- derived view data (memoised; edges are never stored) -----
   const kits = useKitStore((s) => s.kits)
-  const problems = useMemo(() => problemsByScene(project, kits), [project, kits])
-  const distances = useMemo(() => distancesFromStart(project), [project])
+  // While a card is dragged only positions change: keep the previous version for everything that does not depend on them.
+  const [settled, setSettled] = useState(0)
+  const stableRef = useRef<Project>(project)
+  const stable = useMemo(() => {
+    if (sameExceptPositions(stableRef.current, project)) return stableRef.current
+    stableRef.current = project
+    return project
+    // `settled` makes the memo run again when a drag ends, so the check sees the final positions too
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project, settled])
+  const problems = useMemo(() => problemsByScene(stable, kits), [stable, kits])
+  const distances = useMemo(() => distancesFromStart(stable), [stable])
   const matches = useMemo(() => matchingSceneIds(project, query), [project, query])
-  const baseEdges = useMemo(() => deriveEdges(project), [project])
-  const visitEdges = useMemo(() => deriveVisitEdges(project), [project])
+  const baseEdges = useMemo(() => deriveEdges(stable), [stable])
+  const visitEdges = useMemo(() => deriveVisitEdges(stable), [stable])
 
   const dataCache = useRef(new Map<Id, SceneNodeData>())
   const nodes = useMemo<SceneFlowNode[]>(() => {
@@ -201,14 +211,6 @@ export function useMapInteractions(wrapperRef: RefObject<HTMLDivElement | null>,
     const c = centerPoint()
     addSceneAt({ x: Math.round(c.x - CARD_WIDTH / 2), y: Math.round(c.y - 90) })
   }, [addSceneAt, centerPoint])
-
-  const addChapter = useCallback(() => {
-    const p = S().project
-    if (!p) return
-    const { name, color } = nextChapter(p)
-    S().addChapter(name, color)
-    toast(`${name} added. Use a card's right-click menu to move scenes into it.`)
-  }, [S])
 
   const tidy = useCallback(() => {
     const p = S().project
@@ -380,7 +382,11 @@ export function useMapInteractions(wrapperRef: RefObject<HTMLDivElement | null>,
   )
 
   const onNodeDragStart = useCallback(() => pauseHistory(), [])
-  const onNodeDragStop = useCallback(() => resumeHistory(), [])
+  const onNodeDragStop = useCallback(() => {
+    resumeHistory()
+    stableRef.current = useProjectStore.getState().project as Project
+    setSettled((n) => n + 1)
+  }, [])
 
   const openScene = useCallback((id: Id) => useUiStore.getState().openScene(id), [])
 
@@ -450,7 +456,6 @@ export function useMapInteractions(wrapperRef: RefObject<HTMLDivElement | null>,
     requestDelete,
     addSceneAt,
     addSceneInView,
-    addChapter,
     tidy,
     paste,
     focusMatch,

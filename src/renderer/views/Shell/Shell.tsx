@@ -4,6 +4,7 @@ import {
   ChevronDown,
   Download,
   FileCode,
+  HelpCircle,
   Home as HomeIcon,
   LayoutPanelTop,
   Map as MapIcon,
@@ -42,17 +43,18 @@ import { ProblemsDrawer } from '../Problems/ProblemsDrawer'
 import Look from '../Look/Look'
 import Settings from '../Settings/Settings'
 import { RenpyDialogs } from './RenpyDialogs'
+import { ShortcutsModal } from './ShortcutsModal'
 
 const RAIL: { view: View; label: string; icon: ReactNode; empty: string }[] = [
-  { view: 'map', label: 'Story Map', icon: <MapIcon size={20} />, empty: 'The story map arrives in a later step.' },
-  { view: 'characters', label: 'Characters', icon: <Users size={20} />, empty: 'The characters view arrives in a later step.' },
-  { view: 'assets', label: 'Assets', icon: <ImageIcon size={20} />, empty: 'The assets view arrives in a later step.' },
-  { view: 'variables', label: 'Variables', icon: <Sigma size={20} />, empty: 'The variables view arrives in a later step.' },
-  { view: 'scripts', label: 'Script files', icon: <FileCode size={20} />, empty: 'The script files view arrives in a later step.' },
-  { view: 'screens', label: 'Screens', icon: <LayoutPanelTop size={20} />, empty: 'The screen designer arrives in a later step.' },
-  { view: 'look', label: 'Look', icon: <Palette size={20} />, empty: 'The look and feel view arrives in a later step.' },
-  { view: 'kits', label: 'Kits', icon: <Puzzle size={20} />, empty: 'The kits view arrives in a later step.' },
-  { view: 'settings', label: 'Settings', icon: <SettingsIcon size={20} />, empty: 'The settings view arrives in a later step.' }
+  { view: 'map', label: 'Story Map', icon: <MapIcon size={20} />, empty: 'Pick something from the list on the left.' },
+  { view: 'characters', label: 'Characters', icon: <Users size={20} />, empty: 'Pick something from the list on the left.' },
+  { view: 'assets', label: 'Assets', icon: <ImageIcon size={20} />, empty: 'Pick something from the list on the left.' },
+  { view: 'variables', label: 'Variables', icon: <Sigma size={20} />, empty: 'Pick something from the list on the left.' },
+  { view: 'scripts', label: 'Script files', icon: <FileCode size={20} />, empty: 'Pick something from the list on the left.' },
+  { view: 'screens', label: 'Screens', icon: <LayoutPanelTop size={20} />, empty: 'Pick something from the list on the left.' },
+  { view: 'look', label: 'Look', icon: <Palette size={20} />, empty: 'Pick something from the list on the left.' },
+  { view: 'kits', label: 'Kits', icon: <Puzzle size={20} />, empty: 'Pick something from the list on the left.' },
+  { view: 'settings', label: 'Settings', icon: <SettingsIcon size={20} />, empty: 'Pick something from the list on the left.' }
 ]
 
 function TitleField() {
@@ -107,11 +109,18 @@ export default function Shell() {
   const problemsOpen = useUiStore((s) => s.problemsOpen)
   const kitContext = useKitContext()
   const [exportMenu, setExportMenu] = useState<{ x: number; y: number } | null>(null)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null
-      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')) return
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)) return
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (document.querySelector('.modal-backdrop, .playtest')) return
+        e.preventDefault()
+        setShortcutsOpen(true)
+        return
+      }
       if (!(e.ctrlKey || e.metaKey)) return
       const k = e.key.toLowerCase()
       if (k === 'z' && !e.shiftKey) {
@@ -166,6 +175,9 @@ export default function Shell() {
           </IconButton>
         </div>
         <div className="topbar-spacer" />
+        <IconButton label="Keyboard shortcuts (?)" onClick={() => setShortcutsOpen(true)}>
+          <HelpCircle size={18} />
+        </IconButton>
         <Button
           variant="ghost"
           className={errors > 0 ? 'problems-error' : count > 0 ? 'problems-warn' : ''}
@@ -260,6 +272,7 @@ export default function Shell() {
         />
       )}
       <RenpyDialogs />
+      {shortcutsOpen && <ShortcutsModal onClose={() => setShortcutsOpen(false)} />}
     </div>
   )
 }

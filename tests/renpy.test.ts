@@ -18,6 +18,7 @@ interface Call {
   args: string[]
   cwd: unknown
   shell: unknown
+  env: unknown
 }
 
 /** A spawn that records its calls and lets each test decide what the "process" does. */
@@ -26,7 +27,7 @@ function fakeSpawn(behave: (child: FakeChild, call: Call) => void): { spawn: Spa
   const children: FakeChild[] = []
   const spawn: SpawnFn = (exe, args, options) => {
     const child = new FakeChild()
-    const call = { exe, args, cwd: options.cwd, shell: options.shell }
+    const call = { exe, args, cwd: options.cwd, shell: options.shell, env: options.env }
     calls.push(call)
     children.push(child)
     setTimeout(() => behave(child, call), 0)
@@ -57,7 +58,12 @@ describe('createProject', () => {
     })
     const result = await createProject(sdk, target, { width: 1920, height: 1080, accent: '#7c9cff' }, { spawn })
     expect(result).toEqual({ ok: true })
-    expect(calls).toHaveLength(1)
+    // generate_gui, then the game's gui_images command for phones and for desktop (what the Ren'Py launcher does after it)
+    expect(calls).toHaveLength(3)
+    expect(calls[1].args).toEqual([target, 'gui_images'])
+    expect(calls[1].env).toMatchObject({ RENPY_VARIANT: 'small phone' })
+    expect(calls[2].args).toEqual([target, 'gui_images'])
+    expect(calls[2].cwd).toBe(sdk)
     expect(calls[0].exe).toBe(join(sdk, 'renpy.exe'))
     expect(calls[0].args).toEqual([
       join(sdk, 'launcher'),
@@ -75,6 +81,19 @@ describe('createProject', () => {
     ])
     expect(calls[0].cwd).toBe(sdk)
     expect(calls[0].shell).toBeUndefined()
+  })
+
+  it('reports a failure when the menu pictures cannot be drawn', async () => {
+    const target = join(work, 'pics', 'Game')
+    let n = 0
+    const { spawn } = fakeSpawn((child) => {
+      n++
+      if (n === 1) mkdirSync(join(target, 'game'), { recursive: true })
+      child.emit('exit', n === 1 ? 0 : 3)
+    })
+    const result = await createProject(sdk, target, { width: 1280, height: 720, accent: '#112233' }, { spawn })
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain('menu button pictures')
   })
 
   it('reports a failure when the game folder does not appear', async () => {

@@ -89,7 +89,14 @@ function SceneNodeView({ data, selected }: NodeProps<SceneFlowNode>) {
 
   const hasVisits = useMemo(() => (scene ? visitTargets(scene.blocks).length > 0 : false), [scene])
   const handleKey = info ? info.exits.map((r) => r.handleId).join('|') : ''
+  // React Flow measures a card (and its dots) by itself when it first appears; only a later change of the exit rows needs a nudge.
+  // Nudging 300 cards on the first render made opening a large story take seconds.
+  const measuredOnce = useRef(false)
   useEffect(() => {
+    if (!measuredOnce.current) {
+      measuredOnce.current = true
+      return
+    }
     updateNodeInternals(sceneId)
   }, [handleKey, hasVisits, sceneId, updateNodeInternals])
 

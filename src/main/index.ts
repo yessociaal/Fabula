@@ -1,5 +1,6 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'node:path'
+import { closeGuard } from './closeGuard'
 import { registerIpc } from './ipc'
 import { registerAssetProtocolHandler, registerAssetScheme } from './protocol'
 
@@ -22,6 +23,15 @@ function createWindow(): void {
   })
 
   win.once('ready-to-show', () => win.show())
+
+  // Closing waits until the renderer has saved the story (see closeGuard.ts).
+  win.on('close', (event) => {
+    if (closeGuard.request(win)) event.preventDefault()
+  })
+  win.on('closed', () => {
+    closeGuard.clearPending()
+    closeGuard.allow = false
+  })
 
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
 

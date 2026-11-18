@@ -126,6 +126,15 @@ describe('scenes', () => {
     expect(S().dirty).toBe(true)
   })
 
+  it('a scene added without a name gets a name no other scene has', () => {
+    const a = S().addScene({ x: 0, y: 0 })
+    const b = S().addScene({ x: 0, y: 0 })
+    const c = S().addScene({ x: 0, y: 0 })
+    expect([a, b, c].map((id) => P().scenes[id].name)).toEqual(['New scene', 'New scene 2', 'New scene 3'])
+    const d = S().addScene({ x: 0, y: 0 }, 'New scene')
+    expect(P().scenes[d].name).toBe('New scene')
+  })
+
   it('deleteScenes clears exits that pointed at them and the start scene', () => {
     const startId = P().startSceneId!
     const b = S().addScene({ x: 0, y: 0 }, 'B')

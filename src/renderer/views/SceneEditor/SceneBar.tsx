@@ -52,7 +52,7 @@ export function SceneBar({ scene }: { scene: Scene }) {
     },
     {
       label: 'Move to chapter',
-      title: project.chapterOrder.length === 0 ? 'Use + Chapter on the Story Map to create chapters' : undefined,
+      title: project.chapterOrder.length === 0 ? 'Use Chapters on the Story Map toolbar to create chapters' : undefined,
       submenu: [
         { label: `${scene.chapterId === null ? '✓ ' : ''}None`, onSelect: () => S().setSceneChapter(scene.id, null) },
         ...project.chapterOrder

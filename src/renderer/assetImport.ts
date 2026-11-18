@@ -25,7 +25,10 @@ export async function importFiles(files: File[], kind: AssetKind): Promise<Asset
   return added
 }
 
-/** Replace the file behind an existing asset (same id, same name). The old file is deleted afterwards. */
+/**
+ * Replace the file behind an existing asset (same id, same name). The old file is NOT deleted here: Undo has to be able to point
+ * the asset at it again. Files that no asset uses are cleaned up the next time the story is opened.
+ */
 export async function replaceAssetFile(assetId: Id, file: File): Promise<boolean> {
   const { dir, project } = useProjectStore.getState()
   const old = project?.assets[assetId]
@@ -39,7 +42,6 @@ export async function replaceAssetFile(assetId: Id, file: File): Promise<boolean
       height: next.height,
       bytes: next.bytes
     })
-    await api.deleteAssetFile(dir, old.file).catch(() => undefined)
     return true
   } catch (e) {
     toast(cleanErrorMessage(e), 'error')

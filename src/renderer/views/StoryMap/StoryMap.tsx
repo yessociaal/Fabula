@@ -1,9 +1,12 @@
-import { useMemo, useRef } from 'react'
-import { Background, BackgroundVariant, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react'
+import { useEffect, useMemo, useRef } from 'react'
+import { Background, BackgroundVariant, MiniMap, ReactFlow, ReactFlowProvider, useNodesInitialized, useReactFlow, useStore } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import './storyMap.css'
 import type { Id } from '@shared/model'
 import { Button } from '../../components/Button'
+import { EmptyState } from '../../components/EmptyState'
+import { HintCard } from '../../components/HintCard'
+import { Map as MapIcon } from 'lucide-react'
 import { ContextMenu, type MenuItem } from '../../components/ContextMenu'
 import { Modal } from '../../components/Modal'
 import { playInRenpy } from '../../renpyFlows'
@@ -17,6 +20,9 @@ import { useMapUi } from './mapUi'
 
 const nodeTypes = { scene: SceneNode }
 
+/** Below this zoom level the cards drop their text (see .low-detail in storyMap.css). */
+const LOW_DETAIL_ZOOM = 0.45
+
 function MapCanvas() {
   const rf = useReactFlow()
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -24,6 +30,19 @@ function MapCanvas() {
   const m = useMapInteractions(wrapperRef, searchRef)
   const project = useProjectStore((s) => s.project)
   const hasClipboard = useMapUi((s) => s.clipboard !== null)
+
+  // Zoomed far out the cards are only boxes: their text is not drawn (a CSS class, so nothing is re-rendered). This subscribes to a boolean, not to the zoom.
+  const lowDetail = useStore((s) => s.transform[2] < LOW_DETAIL_ZOOM)
+
+  // Fit the whole story into view once the cards have been measured (the fitView prop alone runs before they are).
+  const nodesInitialized = useNodesInitialized()
+  const fitted = useRef(false)
+  useEffect(() => {
+    if (nodesInitialized && !fitted.current) {
+      fitted.current = true
+      rf.fitView({ padding: 0.2, maxZoom: 1 })
+    }
+  }, [nodesInitialized, rf])
 
   const menuItems = useMemo<MenuItem[]>(() => {
     const menu = m.menu
@@ -73,7 +92,7 @@ function MapCanvas() {
       {
         label: 'Move to chapter',
         submenu: chapters,
-        title: project.chapterOrder.length === 0 ? 'Use + Chapter on the toolbar to create chapters' : undefined
+        title: project.chapterOrder.length === 0 ? "Use Chapters on the toolbar to create chapters" : undefined
       },
       { separator: true },
       { label: 'Play from here (Quick play)', onSelect: () => useUiStore.getState().startPlaytest(scene.id) },
@@ -88,12 +107,11 @@ function MapCanvas() {
   }, [m, project, hasClipboard])
 
   return (
-    <div className="story-map">
+    <div className={`story-map ${lowDetail ? 'low-detail' : ''}`}>
       <MapToolbar
         searchRef={searchRef}
         matchCount={m.matchCount}
         onAddScene={m.addSceneInView}
-        onAddChapter={m.addChapter}
         onTidy={m.tidy}
         onZoomIn={() => rf.zoomIn({ duration: 150 })}
         onZoomOut={() => rf.zoomOut({ duration: 150 })}
@@ -144,6 +162,16 @@ function MapCanvas() {
             }}
           />
         </ReactFlow>
+        {Object.keys(project?.scenes ?? {}).length === 0 && (
+          <div className="map-empty">
+            <EmptyState icon={<MapIcon size={28} />} title="No scenes yet">
+              Double-click the canvas, or press Scene, to add the first scene of your story.
+            </EmptyState>
+          </div>
+        )}
+        <HintCard id="map" title="The story map" className="hint-card-map">
+          Double-click empty space to add a scene. Drag from a scene's dot to another scene to connect them. Double-click a scene to write it. Press ? for all shortcuts.
+        </HintCard>
         {m.menu && <ContextMenu x={m.menu.x} y={m.menu.y} items={menuItems} onClose={m.closeMenu} />}
       </div>
       {m.pendingDelete && (

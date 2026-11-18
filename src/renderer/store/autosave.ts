@@ -49,6 +49,21 @@ export function startAutosave(): void {
   })
 }
 
+/**
+ * Make sure everything typed so far is on disk before the window closes: writes the story now when there is anything unsaved.
+ * Resolves true when nothing unsaved is left, false when the save failed (the caller then asks what to do).
+ */
+export async function saveBeforeQuit(): Promise<boolean> {
+  const { dir, project, dirty } = useProjectStore.getState()
+  if (!dir || !project) return true
+  if (timer) {
+    clearTimeout(timer)
+    timer = null
+  } else if (!dirty && useSaveStatus.getState().status === 'saved') return true
+  await saveNow()
+  return !useProjectStore.getState().dirty && useSaveStatus.getState().status === 'saved'
+}
+
 /** Save immediately if a save is waiting. Call before leaving the story. */
 export async function flushAutosave(): Promise<void> {
   if (!timer) return
