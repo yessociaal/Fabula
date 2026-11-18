@@ -463,10 +463,10 @@ describe('golden files and global rules', () => {
   })
 
   it('writes exactly the golden files', () => {
-    expect(result.files.map((f) => f.path)).toEqual(['script.rpy', 'act_one.rpy', 'act_two.rpy', 'extras.rpy', 'terminal.rpy'])
+    expect(result.files.map((f) => f.path)).toEqual(['script.rpy', 'act_one.rpy', 'act_two.rpy', 'interface.rpy', 'extras.rpy', 'terminal.rpy'])
   })
 
-  for (const name of ['script.rpy', 'act_one.rpy', 'act_two.rpy', 'extras.rpy']) {
+  for (const name of ['script.rpy', 'act_one.rpy', 'act_two.rpy', 'interface.rpy', 'extras.rpy']) {
     it(`${name} matches the golden file byte for byte`, () => {
       const expected = readFileSync(goldenPath(name), 'utf8')
       expect(result.files.find((f) => f.path === name)?.content).toBe(expected)
@@ -484,6 +484,7 @@ describe('golden files and global rules', () => {
       'audio/music/night_theme.wav',
       'audio/sfx/door.wav',
       'audio/voice/anna_01.wav',
+      'fonts/handwriting.ttf',
       'images/bg/bg forest.png',
       'images/bg/bg gate.png',
       'images/characters/anna happy.png',
@@ -491,6 +492,7 @@ describe('golden files and global rules', () => {
       'images/characters/left_char smile.png',
       'images/characters/nova calm.png',
       'images/characters/side nova.png',
+      'images/ui/desk.png',
       'movies/intro.webm'
     ])
   })

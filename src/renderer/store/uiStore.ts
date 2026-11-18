@@ -1,12 +1,15 @@
 import { create } from 'zustand'
 import type { Id } from '@shared/model'
 
-export type View = 'map' | 'scene' | 'characters' | 'assets' | 'variables' | 'scripts' | 'kits' | 'settings'
+export type View = 'map' | 'scene' | 'characters' | 'assets' | 'variables' | 'scripts' | 'kits' | 'screens' | 'settings'
 
 export interface UiState {
   view: View
   sceneId: Id | null
   selectedBlockId: Id | null
+  /** The screen open in the Screen Designer, and the element selected on its canvas. */
+  screenId: Id | null
+  selectedElementId: Id | null
   selectedNodeIds: Id[]
   problemsOpen: boolean
   playtest: null | { fromSceneId: Id | null }
@@ -22,6 +25,9 @@ export interface UiState {
   setView(view: View): void
   openScene(sceneId: Id): void
   selectBlock(blockId: Id | null): void
+  /** Open the Screen Designer on a screen. */
+  openScreen(screenId: Id | null, elementId?: Id | null): void
+  selectElement(elementId: Id | null): void
   setSelectedNodes(ids: Id[]): void
   setProblemsOpen(open: boolean): void
   startPlaytest(fromSceneId: Id | null): void
@@ -38,6 +44,8 @@ const initial = {
   view: 'map' as View,
   sceneId: null as Id | null,
   selectedBlockId: null as Id | null,
+  screenId: null as Id | null,
+  selectedElementId: null as Id | null,
   selectedNodeIds: [] as Id[],
   problemsOpen: false,
   playtest: null as null | { fromSceneId: Id | null },
@@ -52,6 +60,8 @@ export const useUiStore = create<UiState>()((set) => ({
   setView: (view) => set({ view }),
   openScene: (sceneId) => set({ view: 'scene', sceneId, selectedBlockId: null }),
   selectBlock: (selectedBlockId) => set({ selectedBlockId }),
+  openScreen: (screenId, elementId = null) => set({ view: 'screens', screenId, selectedElementId: elementId }),
+  selectElement: (selectedElementId) => set({ selectedElementId }),
   setSelectedNodes: (selectedNodeIds) => set({ selectedNodeIds }),
   setProblemsOpen: (problemsOpen) => set({ problemsOpen }),
   startPlaytest: (fromSceneId) => set({ playtest: { fromSceneId } }),

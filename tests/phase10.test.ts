@@ -607,7 +607,7 @@ describe('factory, schema and palette', () => {
       expect(blockSchema.safeParse(createBlock(t)).success, t).toBe(true)
     }
   })
-  it('the More group offers the Phase 10 blocks in order (Phase 11 put Visit, If and Choice before them; Phase 12 adds the code block at the end)', () => {
+  it('the More group offers the Phase 10 blocks in order (Phase 11 put Visit, If and Choice before them; Phase 12 adds the code block at the end; Phase 14 adds Show/Hide screen before it)', () => {
     expect(MORE_PALETTE.map((e) => [e.label, e.type])).toEqual([
       ['Visit scene', 'visit'],
       ['If', 'if'],
@@ -616,6 +616,7 @@ describe('factory, schema and palette', () => {
       ['Movie', 'movie'],
       ['Text box show/hide', 'window'],
       ['Clear page', 'clearPage'],
+      ['Show/Hide screen', 'screen'],
       ["Ren'Py code", 'code']
     ])
   })

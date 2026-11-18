@@ -34,6 +34,10 @@ export function highlightProblem(problem: Problem): void {
 /** Open the scene a problem belongs to and select its block (or point at its exit). */
 export function goToProblem(problem: Problem): void {
   const ui = useUiStore.getState()
+  if (problem.screenId && !problem.sceneId) {
+    ui.openScreen(problem.screenId)
+    return
+  }
   if (!problem.sceneId) {
     ui.setView('map')
     return

@@ -1,0 +1,118 @@
+/* A designed screen drawn at game size inside a positioned container (Quick play, Screen Designer). */
+.screen-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.screen-layer.modal {
+  pointer-events: auto;
+}
+
+.screen-surface {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+
+.scr-el {
+  position: absolute;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.scr-clickable {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.scr-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.scr-missing {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  color: #cfd3dc;
+  font-size: 18px;
+  text-align: center;
+  border: 2px dashed rgba(207, 211, 220, 0.6);
+  background: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+
+.scr-text {
+  width: 100%;
+  line-height: 1.2;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+.scr-button {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 0 12px;
+  color: #fff;
+  font-size: 26px;
+  background: #3a3f4b;
+  border: 2px solid #6f7686;
+  border-radius: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.scr-clickable:hover > .scr-button {
+  background: #4a5266;
+  border-color: #9fb4ff;
+}
+
+.scr-hotspot {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 18px;
+  background: rgba(124, 156, 255, 0.22);
+  border: 2px dashed rgba(124, 156, 255, 0.95);
+  overflow: hidden;
+}
+
+.scr-hotspot-play {
+  width: 100%;
+  height: 100%;
+}
+
+.scr-clickable:hover > .scr-hotspot-play {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.scr-bar {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  background: #262a33;
+  border: 2px solid #5b6270;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.scr-bar-fill {
+  height: 100%;
+  background: #7c9cff;
+}

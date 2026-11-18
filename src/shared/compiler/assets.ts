@@ -50,3 +50,18 @@ export function sidePath(asset: Asset, tag: string): string | null {
 export function lookupAsset(project: Project, id: Id | null): Asset | null {
   return id === null ? null : (project.assets[id] ?? null)
 }
+
+/** Export path of an image used by a designed screen: a UI image goes to `images/ui/`, a background keeps its background path. */
+export function screenImagePath(asset: Asset, names: NameTable): string | null {
+  if (asset.kind === 'background') return backgroundPath(asset, names)
+  const stem = names.stems[asset.id]
+  if (asset.kind !== 'ui' || stem === undefined) return null
+  return `images/ui/${stem}${fileExtension(asset)}`
+}
+
+/** Export path of a font used by a designed screen: `fonts/<stem>.<ext>`. */
+export function fontPath(asset: Asset, names: NameTable): string | null {
+  const stem = names.stems[asset.id]
+  if (asset.kind !== 'font' || stem === undefined) return null
+  return `fonts/${stem}${fileExtension(asset)}`
+}

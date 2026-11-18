@@ -12,6 +12,7 @@ import { CodeEnding } from './CodeEnding'
 import { ChoiceEnding } from './ChoiceEnding'
 import { EndEnding } from './EndEnding'
 import { JumpEnding } from './JumpEnding'
+import { ScreenEnding } from './ScreenEnding'
 
 const TYPES: { value: CoreEndingType; label: string }[] = [
   { value: 'choice', label: 'Choices' },
@@ -48,7 +49,7 @@ export function EndingPanel({ scene }: { scene: Scene }) {
     const kit = kits.find((k) => k.id === id)
     return kit && kit.manifest ? kit.manifest.endings.map((def) => ({ kitId: id, kitName: kit.manifest?.name ?? id, def })) : []
   })
-  const showMore = moreOpen || e.type === 'code' || e.type === 'kit'
+  const showMore = moreOpen || e.type === 'code' || e.type === 'kit' || e.type === 'screen'
 
   return (
     <section className="ending-panel" aria-label="Ending">
@@ -92,6 +93,16 @@ export function EndingPanel({ scene }: { scene: Scene }) {
             >
               Ren'Py code
             </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={e.type === 'screen'}
+              className={e.type === 'screen' ? 'active' : ''}
+              title="End the scene on a screen you designed; each button or hotspot that leaves is an arrow on the map"
+              onClick={() => setEndingType(scene.id, 'screen')}
+            >
+              Screen
+            </button>
             {kitEndings.map(({ kitId, kitName, def }) => {
               const active = e.type === 'kit' && e.kitId === kitId && e.endingType === def.type
               return (
@@ -116,8 +127,9 @@ export function EndingPanel({ scene }: { scene: Scene }) {
       {e.type === 'branch' && <BranchEnding sceneId={scene.id} ending={e} problems={problems} />}
       {e.type === 'end' && <EndEnding />}
       {e.type === 'code' && <CodeEnding sceneId={scene.id} ending={e} problems={problems} />}
+      {e.type === 'screen' && <ScreenEnding sceneId={scene.id} ending={e} problems={problems} />}
       {e.type === 'kit' && <KitEnding sceneId={scene.id} ending={e} problems={problems} />}
-      {!['choice', 'jump', 'branch', 'end', 'code', 'kit'].includes(e.type) && (
+      {!['choice', 'jump', 'branch', 'end', 'code', 'kit', 'screen'].includes(e.type) && (
         <p className="muted-note">This kind of ending cannot be edited here yet.</p>
       )}
     </section>

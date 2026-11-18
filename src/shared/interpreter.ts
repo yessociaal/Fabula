@@ -2,6 +2,7 @@ import { getBlockAt, resolveList, type BlockPath } from './blockTree'
 import type { Effect, Id, Project, Scalar } from './model'
 import { evaluateCondition, type VariableValues } from './conditions'
 import { applyBlockToStage, type StageState } from './stage'
+import { actionOf, leaveElements } from './screens'
 
 /** The line currently on screen (dialogue, or the prompt of a choice). */
 export interface PlayLine {
@@ -72,6 +73,10 @@ export interface PlayState {
    * `kitId` lets the view say which kit it is.
    */
   kitEnding: { kitId: string; endingType: string; exits: PlayMenuOption[] } | null
+  /** Designed screens that are on screen right now (shown by a Show screen block or a Show screen action), in the order they were shown. */
+  shownScreens: Id[]
+  /** A screen ending is showing: the story waits for the player to click one of the screen's leaving elements. */
+  screenEnding: { screenId: Id } | null
   /** Ids of the kits whose blocks were passed over in this scene without running (kit code only runs in real Ren'Py). */
   skippedKits: string[]
   variables: VariableValues
@@ -88,6 +93,8 @@ export type PlayInput =
   | { type: 'answer'; text: string }
   /** Follow one exit of a code ending. */
   | { type: 'exit'; exitId: Id }
+  /** The player clicked an element of a designed screen that is on screen. */
+  | { type: 'screenAction'; screenId: Id; elementId: Id }
 
 export const NOWHERE_NOTICE = 'This exit goes nowhere'
 export const CODE_BLOCK_NOTICE = "This scene runs Ren'Py code that Quick play cannot run"
@@ -142,7 +149,9 @@ function cloneState(s: PlayState): PlayState {
     history: [...s.history],
     cursor: [...s.cursor],
     callStack: [...s.callStack],
-    inlineMenu: s.inlineMenu ? [...s.inlineMenu] : null
+    inlineMenu: s.inlineMenu ? [...s.inlineMenu] : null,
+    shownScreens: [...s.shownScreens],
+    screenEnding: s.screenEnding ? { ...s.screenEnding } : null
   }
 }
 
@@ -153,6 +162,7 @@ function finish(s: PlayState, notice: string | null): void {
   s.menu = null
   s.codeExits = null
   s.kitEnding = null
+  s.screenEnding = null
   s.ask = null
   s.movie = null
   s.notice = notice
@@ -208,6 +218,14 @@ function run(project: Project, s: PlayState): void {
           s.menu = options.map((o) => ({ id: o.id, text: o.text }))
           s.inlineMenu = [...prefix, { i: at }]
           return
+        }
+        case 'screen': {
+          if (block.screenId === null || !project.screens[block.screenId]) break
+          const id = block.screenId
+          if (block.action === 'show') {
+            if (!s.shownScreens.includes(id)) s.shownScreens = [...s.shownScreens, id]
+          } else s.shownScreens = s.shownScreens.filter((x) => x !== id)
+          break
         }
         case 'code':
           if (block.code.trim() !== '') s.skippedCode = true
@@ -304,6 +322,13 @@ function run(project: Project, s: PlayState): void {
         if (ending.code.trim() !== '') s.skippedCode = true
         return
       }
+      case 'screen': {
+        const def = ending.screenId === null ? undefined : project.screens[ending.screenId]
+        if (!def) return finish(s, NOWHERE_NOTICE)
+        if (leaveElements(def).length === 0) return finish(s, 'This screen has no way to leave')
+        s.screenEnding = { screenId: def.id }
+        return
+      }
       case 'kit': {
         if (ending.exits.length === 0) return finish(s, 'This kit ending has no exits to follow')
         s.kitEnding = {
@@ -342,6 +367,8 @@ export function start(project: Project, sceneId: Id | null): PlayState {
     menu: null,
     codeExits: null,
     kitEnding: null,
+    shownScreens: [],
+    screenEnding: null,
     skippedKits: [],
     skippedCode: false,
     variables: defaultVariables(project),
@@ -386,8 +413,41 @@ export function step(project: Project, state: PlayState, input: PlayInput): Play
     run(project, s)
     return s
   }
+  if (input.type === 'screenAction') {
+    if (!s.shownScreens.includes(input.screenId) && s.screenEnding?.screenId !== input.screenId) return state
+    const def = project.screens[input.screenId]
+    const element = def?.elements.find((el) => el.id === input.elementId)
+    const action = element ? actionOf(element) : null
+    if (!def || !action) return state
+    switch (action.type) {
+      case 'setVariable':
+        s.variables = applyEffect(s.variables, action.effect)
+        return s
+      case 'showScreen':
+        if (action.screenId !== null && project.screens[action.screenId] && !s.shownScreens.includes(action.screenId)) {
+          s.shownScreens = [...s.shownScreens, action.screenId]
+        }
+        return s
+      case 'hideThis':
+        // Like Hide() in Ren'Py: it closes a screen that was shown. A screen that is the ending of the scene stays up.
+        s.shownScreens = s.shownScreens.filter((x) => x !== def.id)
+        return s
+      case 'leave': {
+        const scene = s.sceneId ? project.scenes[s.sceneId] : undefined
+        const ending = scene?.ending
+        if (!s.screenEnding || s.screenEnding.screenId !== def.id || !ending || ending.type !== 'screen') return state
+        if (!leaveElements(def).some((el) => el.id === element?.id)) return state
+        s.screenEnding = null
+        goTo(project, s, ending.targets[input.elementId] ?? null)
+        run(project, s)
+        return s
+      }
+    }
+  }
   if (input.type === 'advance') {
-    if (s.menu || s.ask || s.codeExits || s.kitEnding) return state
+    if (s.menu || s.ask || s.codeExits || s.kitEnding || s.screenEnding) return state
+    // A modal screen on screen blocks the dialogue behind it, as in Ren'Py.
+    if (s.shownScreens.some((id) => project.screens[id]?.modal)) return state
     s.line = null
     s.pause = null
     s.movie = null

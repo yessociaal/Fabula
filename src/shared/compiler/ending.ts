@@ -3,6 +3,7 @@ import type { Ending, Id } from '../model'
 import { conditionPython, emitEffect, indentLines, promptLine, sayText } from './blocks'
 import type { CompileContext } from './blocks'
 import { emitKitEnding } from './kits'
+import { emitScreenEnding } from './screens'
 
 const IND = '    '
 
@@ -62,6 +63,8 @@ export function emitEnding(ending: Ending, ctx: CompileContext): string | null {
       })
       return indentLines(text)
     }
+    case 'screen':
+      return emitScreenEnding(ending.screenId, ending.targets, ctx, (target) => jumpLine(target, ctx))
     case 'kit':
       return emitKitEnding(ending, ctx)
     default:

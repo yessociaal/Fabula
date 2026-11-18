@@ -19,6 +19,7 @@ import { MovieInspector } from './MovieInspector'
 import { PauseInspector } from './PauseInspector'
 import { PlayMusicInspector } from './PlayMusicInspector'
 import { PlaySoundInspector } from './PlaySoundInspector'
+import { ScreenBlockInspector } from './ScreenBlockInspector'
 import { ShowInspector } from './ShowInspector'
 import { StopMusicInspector } from './StopMusicInspector'
 import { TransitionInspector } from './TransitionInspector'
@@ -61,6 +62,8 @@ function Fields({ sceneId, block, path }: { sceneId: Id; block: Block; path: Blo
       return <KitInspector sceneId={sceneId} block={block} />
     case 'code':
       return <CodeInspector {...p} block={block} />
+    case 'screen':
+      return <ScreenBlockInspector {...p} block={block} />
     case 'visit':
       return <VisitInspector {...p} block={block} />
     case 'if':

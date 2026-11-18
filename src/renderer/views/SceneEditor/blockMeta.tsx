@@ -8,6 +8,7 @@ import {
   Eraser,
   Film,
   Hash,
+  LayoutPanelTop,
   Keyboard,
   Image as ImageIcon,
   MessageSquare,
@@ -69,6 +70,8 @@ export function iconFor(type: string, narration: boolean, size = 16): ReactNode 
       return <Eraser size={size} />
     case 'code':
       return <CodeXml size={size} />
+    case 'screen':
+      return <LayoutPanelTop size={size} />
     case 'visit':
       return <CornerDownRight size={size} />
     case 'if':
@@ -111,6 +114,8 @@ export function blockKindLabel(block: Block): string {
       return 'Text box show/hide'
     case 'clearPage':
       return 'Clear page'
+    case 'screen':
+      return 'Show/Hide screen'
     case 'kit':
       return kitBlockDef(block)?.name ?? 'Kit block'
     case 'code':

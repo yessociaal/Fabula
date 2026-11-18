@@ -288,9 +288,9 @@ describe('interpreter', () => {
     expect(JSON.stringify(start(w.p, a))).toBe(frozen)
   })
 
-  it('skips extended blocks and ends with a notice on an extended ending', () => {
+  it('skips extended blocks and ends with a notice on an ending it does not know', () => {
     const w = world()
-    const a = w.add('Start', [{ id: 'x', type: 'code', code: 'pass' }, say(null, 'after')], { type: 'screen', screenId: null, targets: {} })
+    const a = w.add('Start', [{ id: 'x', type: 'code', code: 'pass' }, say(null, 'after')], { type: 'mystery' } as never)
     let s = start(w.p, a)
     expect(s.line?.text).toBe('after')
     s = advance(w.p, s)

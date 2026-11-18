@@ -159,7 +159,7 @@ function Run({ project, dir, fromSceneId, onRestart }: { project: Project; dir: 
         e.preventDefault()
         close()
       } else if (e.key === ' ' || e.key === 'Enter') {
-        if (s.menu || s.codeExits || s.kitEnding) return
+        if (s.menu || s.codeExits || s.kitEnding || s.screenEnding) return
         e.preventDefault()
         send({ type: 'advance' })
       } else if (/^[1-9]$/.test(e.key) && s.codeExits) {
@@ -190,8 +190,15 @@ function Run({ project, dir, fromSceneId, onRestart }: { project: Project; dir: 
   const sceneName = state.sceneId ? (project.scenes[state.sceneId]?.name ?? '') : ''
   const dialogue = state.line ? dialogueFor(project, state.line.characterId, state.line.text) : null
   const waitingForClick =
-    state.status === 'running' && !state.menu && !state.codeExits && !state.kitEnding && !state.ask && (state.line !== null || state.movie !== null || (state.pause !== null && state.pause.seconds === null))
+    state.status === 'running' && !state.menu && !state.codeExits && !state.kitEnding && !state.screenEnding && !state.ask && (state.line !== null || state.movie !== null || (state.pause !== null && state.pause.seconds === null))
   const refs = useMemo(() => buildNameTable(project).variableRefs, [project])
+  // Designed screens are drawn for real: the ones a block or an action showed, then the one the scene ends with.
+  const screenDefs = useMemo(() => {
+    const ids = [...state.shownScreens]
+    if (state.screenEnding && !ids.includes(state.screenEnding.screenId)) ids.push(state.screenEnding.screenId)
+    return ids.flatMap((id) => (project.screens[id] ? [project.screens[id]] : []))
+  }, [project, state.shownScreens, state.screenEnding])
+  const variableNames = useMemo(() => Object.fromEntries(Object.entries(project.variables).map(([id, v]) => [id, v.name])), [project])
 
   return (
     <div className="playtest" role="dialog" aria-modal="true" aria-label="Quick play">
@@ -221,7 +228,7 @@ function Run({ project, dir, fromSceneId, onRestart }: { project: Project; dir: 
         <div
           className={`playtest-stage-wrap ${waitingForClick ? 'clickable' : ''}`}
           onClick={(e) => {
-            if ((e.target as HTMLElement).closest('.stage-choice')) return
+            if ((e.target as HTMLElement).closest('.stage-choice, .screen-layer')) return
             send({ type: 'advance' })
           }}
         >
@@ -238,6 +245,18 @@ function Run({ project, dir, fromSceneId, onRestart }: { project: Project; dir: 
             movie={state.movie ? { name: state.movie.assetId ? (project.assets[state.movie.assetId]?.name ?? null) : null } : null}
             ask={state.ask ? { prompt: state.ask.prompt, defaultText: state.ask.defaultText, maxLength: state.ask.maxLength } : null}
             onAnswer={(text) => send({ type: 'answer', text })}
+            screens={
+              screenDefs.length > 0
+                ? {
+                    defs: screenDefs,
+                    width: project.meta.width,
+                    height: project.meta.height,
+                    values: state.variables,
+                    variableNames,
+                    onElementClick: (screenId, elementId) => send({ type: 'screenAction', screenId, elementId })
+                  }
+                : null
+            }
             fade
           />
           {state.status === 'running' && state.codeExits && (

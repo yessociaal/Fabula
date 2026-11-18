@@ -58,6 +58,7 @@ export const MORE_PALETTE: PaletteEntry[] = [
   { key: 'movie', type: 'movie', label: 'Movie' },
   { key: 'window', type: 'window', label: 'Text box show/hide' },
   { key: 'clearPage', type: 'clearPage', label: 'Clear page' },
+  { key: 'screen', type: 'screen', label: 'Show/Hide screen' },
   { key: 'code', type: 'code', label: "Ren'Py code" }
 ]
 

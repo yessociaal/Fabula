@@ -37,7 +37,7 @@ function setup() {
 describe('findUsage', () => {
   it('is empty for an empty project', () => {
     const u = findUsage(createProject('T'))
-    expect(u).toEqual({ assets: {}, characters: {}, variables: {} })
+    expect(u).toEqual({ assets: {}, characters: {}, variables: {}, screens: {} })
     expect(countUsage(undefined)).toBe(0)
   })
 

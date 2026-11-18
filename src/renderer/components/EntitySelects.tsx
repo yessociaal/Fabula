@@ -56,6 +56,48 @@ export function SceneSelect({ value, onChange, nearSceneId, placeholder = 'Choos
   return <Dropdown value={value} items={items} onChange={onChange} placeholder={placeholder} aria-label={rest['aria-label']} />
 }
 
+// ---------- Screens ----------
+
+interface ScreenSelectProps {
+  value: Id | null
+  onChange: (screenId: Id | null) => void
+  placeholder?: string
+  /** Screens listed (for example, leave out the screen that is being edited). */
+  exclude?: Id
+  'aria-label': string
+}
+
+/** Pick a designed screen; the last entry creates a new, empty one and selects it (open it in the Screen Designer to fill it). */
+export function ScreenSelect({ value, onChange, placeholder = 'Choose a screen…', exclude, ...rest }: ScreenSelectProps) {
+  const project = useProjectStore((s) => s.project)
+  const [creating, setCreating] = useState(false)
+  const items = useMemo<DropdownItem<string>[]>(() => {
+    if (!project) return []
+    const list: DropdownItem<string>[] = project.screenOrder
+      .filter((id) => project.screens[id] && id !== exclude)
+      .map((id) => ({ kind: 'item', value: id, label: project.screens[id].name || 'Untitled screen' }))
+    list.push({ kind: 'separator' }, { kind: 'action', label: '+ New screen…', onSelect: () => setCreating(true) })
+    return list
+  }, [project, exclude])
+  return (
+    <>
+      <Dropdown value={value} items={items} onChange={onChange} placeholder={placeholder} aria-label={rest['aria-label']} />
+      {creating && (
+        <NewItemModal
+          title="New screen"
+          initialName={uniqueName('New screen', Object.values(project?.screens ?? {}).map((s) => s.name))}
+          confirmLabel="Create screen"
+          onCancel={() => setCreating(false)}
+          onCreate={(name) => {
+            setCreating(false)
+            batch(() => onChange(useProjectStore.getState().addScreen(name)))
+          }}
+        />
+      )}
+    </>
+  )
+}
+
 // ---------- Characters ----------
 
 interface CharacterSelectProps {

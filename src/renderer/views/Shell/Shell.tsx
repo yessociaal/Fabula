@@ -5,6 +5,7 @@ import {
   Download,
   FileCode,
   Home as HomeIcon,
+  LayoutPanelTop,
   Map as MapIcon,
   Puzzle,
   Play,
@@ -34,6 +35,7 @@ import StoryMap from '../StoryMap/StoryMap'
 import Variables from '../Variables/Variables'
 import ScriptFiles from '../ScriptFiles/ScriptFiles'
 import Kits from '../Kits/Kits'
+import ScreenDesigner from '../ScreenDesigner/ScreenDesigner'
 import { useKitContext } from '../../store/kitStore'
 import { ProblemsDrawer } from '../Problems/ProblemsDrawer'
 import Settings from '../Settings/Settings'
@@ -45,6 +47,7 @@ const RAIL: { view: View; label: string; icon: ReactNode; empty: string }[] = [
   { view: 'assets', label: 'Assets', icon: <ImageIcon size={20} />, empty: 'The assets view arrives in a later step.' },
   { view: 'variables', label: 'Variables', icon: <Sigma size={20} />, empty: 'The variables view arrives in a later step.' },
   { view: 'scripts', label: 'Script files', icon: <FileCode size={20} />, empty: 'The script files view arrives in a later step.' },
+  { view: 'screens', label: 'Screens', icon: <LayoutPanelTop size={20} />, empty: 'The screen designer arrives in a later step.' },
   { view: 'kits', label: 'Kits', icon: <Puzzle size={20} />, empty: 'The kits view arrives in a later step.' },
   { view: 'settings', label: 'Settings', icon: <SettingsIcon size={20} />, empty: 'The settings view arrives in a later step.' }
 ]
@@ -223,6 +226,8 @@ export default function Shell() {
             <SceneEditor />
           ) : view === 'scripts' ? (
             <ScriptFiles />
+          ) : view === 'screens' ? (
+            <ScreenDesigner />
           ) : view === 'kits' ? (
             <Kits />
           ) : view === 'settings' ? (

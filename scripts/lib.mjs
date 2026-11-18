@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { build } from 'vite'
@@ -112,14 +112,18 @@ export function makeWav() {
 }
 
 /**
- * Placeholder file contents by extension: a real 1x1 PNG, a real silent WAV, and for movies and fonts a zero-filled
- * placeholder (building a valid WebM or TrueType file by hand is not worth it; lint only checks that the file exists,
- * and the game checks below never play the movie).
+ * Placeholder file contents by extension: a real 1x1 PNG, a real silent WAV, a real font (the DejaVu font that ships with the SDK,
+ * because a game that draws text with a broken font file crashes), and for movies a zero-filled placeholder (building a valid WebM
+ * by hand is not worth it; lint only checks that the file exists, and the game checks never play the movie).
  */
 export function placeholderFor(path) {
   const lower = path.toLowerCase()
   if (lower.endsWith('.png')) return makePng()
-  if (/\.(webm|ogv|mkv|mp4|ttf|otf)$/.test(lower)) return Buffer.alloc(64)
+  if (/\.(ttf|otf)$/.test(lower)) {
+    const font = join(sdk, 'renpy', 'common', 'DejaVuSans.ttf')
+    return existsSync(font) ? readFileSync(font) : Buffer.alloc(64)
+  }
+  if (/\.(webm|ogv|mkv|mp4)$/.test(lower)) return Buffer.alloc(64)
   return makeWav()
 }
 

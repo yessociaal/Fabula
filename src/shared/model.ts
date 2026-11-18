@@ -248,8 +248,24 @@ export type ScreenElement =
 export type CoreBlockType = CoreBlock['type']
 export type CoreEndingType = CoreEnding['type']
 /** Ending types the Ending panel can switch to: the four core ones and the Ren'Py code ending. */
-export type SwitchableEndingType = CoreEndingType | 'code'
+export type SwitchableEndingType = CoreEndingType | 'code' | 'screen'
 
 /** Extra block types the palette can create (the rest of ExtraBlock arrives in later phases). */
-export type NewExtraBlockType = 'ask' | 'movie' | 'window' | 'clearPage' | 'visit' | 'if' | 'inlineChoice' | 'code'
+export type NewExtraBlockType = 'ask' | 'movie' | 'window' | 'clearPage' | 'visit' | 'if' | 'inlineChoice' | 'code' | 'screen'
 export type CreatableBlockType = CoreBlockType | NewExtraBlockType
+
+export type ScreenElementType = ScreenElement['type']
+export type ScreenActionType = ScreenAction['type']
+
+/** The fields of any screen element that can be changed (a field that does not fit the element's type is ignored). */
+export type ScreenElementPatch = Partial<Omit<Box, 'id'>> & {
+  assetId?: Id | null
+  text?: string
+  size?: number
+  color?: string
+  fontAssetId?: Id | null
+  idleAssetId?: Id | null
+  hoverAssetId?: Id | null
+  variableId?: Id | null
+  max?: number
+}

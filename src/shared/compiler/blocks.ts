@@ -236,6 +236,10 @@ export function emitBlock(block: Block, ctx: CompileContext): string | null {
       }
       return ['menu:', ...items].join('\n\n')
     }
+    case 'screen': {
+      const name = block.screenId === null ? undefined : names.screens[block.screenId]
+      return name === undefined ? null : `${block.action} screen ${name}`
+    }
     case 'kit':
       return emitKitBlock(block, ctx)
     case 'code':

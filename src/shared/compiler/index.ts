@@ -8,6 +8,7 @@ import type { CompileContext } from './blocks'
 import { emitEnding } from './ending'
 import { createCompileContext } from './context'
 import { kitFiles } from './kits'
+import { emitInterface } from './screens'
 import type { KitContext } from '../kits/types'
 import { pythonString, pythonValue } from './text'
 
@@ -101,6 +102,9 @@ export function compileProject(project: Project, context: KitContext = {}): Comp
     })
     files.push({ path: group.file, content: content === '' ? '' : `${content}\n` })
   }
+
+  const interfaceText = emitInterface(ctx)
+  if (interfaceText !== null) files.push({ path: 'interface.rpy', content: interfaceText })
 
   // Script files the author wrote: each goes out exactly as typed, under its own name.
   for (const file of usableScriptFiles(project)) files.push({ path: scriptFilePath(file.name), content: file.content })

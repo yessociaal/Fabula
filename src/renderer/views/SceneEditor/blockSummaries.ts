@@ -124,6 +124,11 @@ export function summarizeBlock(block: Block, project: Project, context: KitConte
       const first = firstCodeLine(block.code)
       return { title: "Ren'Py code", detail: first === '' ? '(empty)' : oneLine(first, 50) }
     }
+    case 'screen': {
+      const def = block.screenId === null ? undefined : project.screens[block.screenId]
+      const name = def ? def.name || 'Untitled screen' : block.screenId === null ? 'Pick a screen' : 'Missing screen'
+      return { title: block.action === 'show' ? 'Show screen' : 'Hide screen', detail: name }
+    }
     case 'visit': {
       const scene = block.sceneId === null ? undefined : project.scenes[block.sceneId]
       return { title: 'Visit scene', detail: scene ? `${scene.name || 'Untitled scene'} · then comes back here` : block.sceneId === null ? 'Pick a scene' : 'Missing scene' }

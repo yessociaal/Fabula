@@ -43,12 +43,12 @@ export function buildExitRows(scene: Scene, project: Project): ExitRowInfo[] {
   return listExits(scene, project).map((x) => {
     let text = x.label
     if (x.kind === 'option') text = x.label.trim() === '' ? 'Untitled choice' : x.label
-    else if (x.kind === 'named') text = x.label.trim() === '' ? 'Untitled exit' : x.label
+    else if (x.kind === 'named' || x.kind === 'element') text = x.label.trim() === '' ? 'Untitled exit' : x.label
     else if (x.kind === 'case' && e.type === 'branch') {
       const c = e.cases.find((k) => `case:${k.id}` === x.handleId)
       text = c ? conditionToWords(c.condition, varName) : x.label
     }
-    return { handleId: x.handleId, text, ifTag: x.kind === 'option' && x.conditional, unset: x.target === null, ...(x.kind === 'named' ? { named: true as const } : {}) }
+    return { handleId: x.handleId, text, ifTag: x.kind === 'option' && x.conditional, unset: x.target === null, ...(x.kind === 'named' || x.kind === 'element' ? { named: true as const } : {}) }
   })
 }
 

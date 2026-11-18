@@ -2,6 +2,8 @@ import type { Block, Condition, Effect, Id, Project, Scene, StagePosition } from
 import { MAX_BLOCK_DEPTH, walkBlocks, type BlockPath } from './blockTree'
 import { findCodeRefs, mentionsLeaving } from './codeRefs'
 import { sceneSuccessors } from './edges'
+import { actionOf, leaveElements } from './screens'
+import { slugify } from './naming'
 import { labelLockProblem } from './naming'
 import { scriptFileProblems, usableScriptFiles, scriptFilePath } from './scriptFiles'
 import { createCompileContext } from './compiler/context'
@@ -16,6 +18,8 @@ export interface Problem {
   sceneId?: Id
   blockId?: Id
   exitId?: string
+  /** The designed screen the problem is about (the Screen Designer opens on it). */
+  screenId?: Id
 }
 
 const TYPE_WORD = { boolean: 'true/false', number: 'number', text: 'text' } as const
@@ -37,6 +41,10 @@ export function validateProject(project: Project, context: KitContext = {}): Pro
   const usedAssets = new Set<Id>()
   const usedCharacters = new Set<Id>()
   const usedVariables = new Set<Id>()
+  const usedScreens = new Set<Id>()
+  /** Screens a Show screen block puts on screen, and screens some scene uses as its ending. */
+  const shownByBlock = new Set<Id>()
+  const endingScreens = new Set<Id>()
 
   const startOk = project.startSceneId !== null && project.scenes[project.startSceneId] !== undefined
   if (!startOk) {
@@ -82,13 +90,15 @@ export function validateProject(project: Project, context: KitContext = {}): Pro
     }
   }
 
-  const checkEffect = (scene: Scene, effect: Effect, where: string, blockId?: Id, exitId?: string): void => {
+  const checkEffect = (scene: Scene | undefined, effect: Effect, where: string, blockId?: Id, exitId?: string, screenId?: Id): void => {
+    const who = scene ? `${sceneOf(scene)}: ` : ''
     const variable = effect.variableId === null ? undefined : project.variables[effect.variableId]
     if (!variable) {
       add({
         severity: 'error',
-        message: `${sceneOf(scene)}: ${where} changes a variable but none is picked. Choose a variable.`,
-        sceneId: scene.id,
+        message: `${who}${where} changes a variable but none is picked. Choose a variable.`,
+        sceneId: scene?.id,
+          screenId,
         blockId,
         exitId
       })
@@ -99,8 +109,9 @@ export function validateProject(project: Project, context: KitContext = {}): Pro
       if (variable.type !== 'boolean') {
         add({
           severity: 'error',
-          message: `${sceneOf(scene)}: ${where} flips "${variable.name}", which is not a true/false variable.`,
-          sceneId: scene.id,
+          message: `${who}${where} flips "${variable.name}", which is not a true/false variable.`,
+          sceneId: scene?.id,
+          screenId,
           blockId,
           exitId
         })
@@ -111,8 +122,9 @@ export function validateProject(project: Project, context: KitContext = {}): Pro
       if (variable.type !== 'number' || typeof effect.value !== 'number') {
         add({
           severity: 'error',
-          message: `${sceneOf(scene)}: ${where} adds to or subtracts from "${variable.name}", which needs a number variable and a number.`,
-          sceneId: scene.id,
+          message: `${who}${where} adds to or subtracts from "${variable.name}", which needs a number variable and a number.`,
+          sceneId: scene?.id,
+          screenId,
           blockId,
           exitId
         })
@@ -122,8 +134,9 @@ export function validateProject(project: Project, context: KitContext = {}): Pro
     if (!valueMatches(variable.type, effect.value)) {
       add({
         severity: 'error',
-        message: `${sceneOf(scene)}: ${where} sets "${variable.name}" to a value that is not a ${TYPE_WORD[variable.type]}.`,
-        sceneId: scene.id,
+        message: `${who}${where} sets "${variable.name}" to a value that is not a ${TYPE_WORD[variable.type]}.`,
+        sceneId: scene?.id,
+          screenId,
         blockId,
         exitId
       })
@@ -372,6 +385,22 @@ export function validateProject(project: Project, context: KitContext = {}): Pro
             blockId: block.id
           })
         }
+        break
+      }
+      case 'screen': {
+        const def = block.screenId === null ? undefined : project.screens[block.screenId]
+        const verb = block.action === 'show' ? 'Show' : 'Hide'
+        if (!def) {
+          add({
+            severity: 'error',
+            message: `${sceneOf(scene)}: the ${verb} screen block (${label}) has no screen. Pick a screen.`,
+            sceneId: scene.id,
+            blockId: block.id
+          })
+          break
+        }
+        usedScreens.add(def.id)
+        if (block.action === 'show') shownByBlock.add(def.id)
         break
       }
       case 'kit':
@@ -625,6 +654,33 @@ export function validateProject(project: Project, context: KitContext = {}): Pro
           sceneId: scene.id
         })
       }
+    } else if (e.type === 'screen') {
+      const def = e.screenId === null ? undefined : project.screens[e.screenId]
+      if (!def) {
+        add({ severity: 'error', message: `${sceneOf(scene)}: the screen ending has no screen. Pick a screen.`, sceneId: scene.id })
+      } else {
+        usedScreens.add(def.id)
+        endingScreens.add(def.id)
+        const leaving = leaveElements(def)
+        if (leaving.length === 0) {
+          add({
+            severity: 'error',
+            message: `${sceneOf(scene)}: the screen "${def.name}" has no way to leave. Give a button or hotspot the action "Leave screen" in the Screen Designer.`,
+            sceneId: scene.id,
+            screenId: def.id
+          })
+        }
+        for (const el of leaving) {
+          if (targetMissing(e.targets[el.id] ?? null)) {
+            add({
+              severity: 'error',
+              message: `${sceneOf(scene)}: "${el.name}" on the screen "${def.name}" doesn't lead anywhere. Choose a scene for it.`,
+              sceneId: scene.id,
+              exitId: `x:${el.id}`
+            })
+          }
+        }
+      }
     } else if (e.type === 'kit') {
       checkKitPart(scene, 'ending', e.kitId, e.endingType, e.params, '', undefined, e.exits)
       for (const x of e.exits) {
@@ -637,6 +693,95 @@ export function validateProject(project: Project, context: KitContext = {}): Pro
           })
         }
       }
+    }
+  }
+
+  const screenDefs = project.screenOrder.map((id) => project.screens[id]).filter((d): d is NonNullable<typeof d> => d !== undefined)
+  const screenNameCounts = new Map<string, number>()
+  for (const def of screenDefs) {
+    const key = def.name.trim().toLowerCase()
+    screenNameCounts.set(key, (screenNameCounts.get(key) ?? 0) + 1)
+  }
+  const shownByScreen = new Set<Id>()
+  for (const def of screenDefs) {
+    for (const el of def.elements) {
+      const a = actionOf(el)
+      if (a && a.type === 'showScreen' && a.screenId !== null && project.screens[a.screenId]) shownByScreen.add(a.screenId)
+    }
+  }
+  for (const def of screenDefs) {
+    const where = `The screen "${def.name}"`
+    const report = (severity: 'error' | 'warning', message: string): void => add({ severity, message, screenId: def.id })
+    if (def.name.trim() === '') report('error', 'A screen has no name. Give every screen a name.')
+    else if ((screenNameCounts.get(def.name.trim().toLowerCase()) ?? 0) > 1) {
+      report('error', `Two screens are both called "${def.name}". Give each screen its own name.`)
+    }
+    if (!usedScreens.has(def.id) && !shownByScreen.has(def.id)) {
+      report('warning', `${where} is not used anywhere. Show it with a Show screen block, or use it as the ending of a scene.`)
+    }
+    const slugCounts = new Map<string, number>()
+    for (const el of def.elements) {
+      const slug = slugify(el.name, 'element')
+      slugCounts.set(slug, (slugCounts.get(slug) ?? 0) + 1)
+    }
+    const reportedSlugs = new Set<string>()
+    const leaving: string[] = []
+    for (const el of def.elements) {
+      const kindWord = el.type === 'imageButton' ? 'image button' : el.type
+      const label = el.name.trim() === '' ? 'An element' : `The ${kindWord} "${el.name}"`
+      const at = `${where}: ${label}`
+      if (el.name.trim() === '') report('error', `${where} has an element with no name. Give every element a name.`)
+      else {
+        const slug = slugify(el.name, 'element')
+        if ((slugCounts.get(slug) ?? 0) > 1 && !reportedSlugs.has(slug)) {
+          reportedSlugs.add(slug)
+          report('error', `${where} has two elements named "${el.name}" (or names that become the same in the game). Give each element its own name.`)
+        }
+      }
+      const pickFile = (id: Id | null, kinds: readonly string[], what: string, required: boolean): void => {
+        if (id === null) {
+          if (required) report('error', `${at} has no ${what}. Pick one.`)
+          return
+        }
+        const asset = project.assets[id]
+        if (!asset) report('error', `${at} uses a ${what} that no longer exists. Pick another.`)
+        else if (!kinds.includes(asset.kind)) report('error', `${at} needs a ${kinds.join(' or ')} file for its ${what}, but "${asset.name}" is a ${asset.kind} file.`)
+        else usedAssets.add(asset.id)
+      }
+      if (el.type === 'image') pickFile(el.assetId, ['ui', 'background'], 'picture', true)
+      if (el.type === 'imageButton') {
+        pickFile(el.idleAssetId, ['ui', 'background'], 'idle picture', true)
+        pickFile(el.hoverAssetId, ['ui', 'background'], 'hover picture', false)
+      }
+      if (el.type === 'text') pickFile(el.fontAssetId, ['font'], 'font', false)
+      if (el.type === 'button' && el.text.trim() === '') report('error', `${at} has no text. Type what the player sees on it.`)
+      if (el.type === 'bar') {
+        const variable = el.variableId === null ? undefined : project.variables[el.variableId]
+        if (!variable) report('error', `${at} has no variable to show. Pick a number variable.`)
+        else {
+          usedVariables.add(variable.id)
+          if (variable.type !== 'number') report('error', `${at} shows "${variable.name}", which is not a number variable. Pick a number variable.`)
+        }
+        if (!(el.max > 0)) report('error', `${at} needs a maximum above 0.`)
+      }
+      const action = actionOf(el)
+      if (action?.type === 'setVariable') checkEffect(undefined, action.effect, at, undefined, undefined, def.id)
+      if (action?.type === 'showScreen') {
+        if (action.screenId === null) report('error', `${at} should show a screen but none is picked. Pick a screen.`)
+        else if (!project.screens[action.screenId]) report('error', `${at} shows a screen that no longer exists. Pick another.`)
+      }
+      if (action?.type === 'leave') leaving.push(el.name)
+      const outside = el.x >= project.meta.width || el.y >= project.meta.height || el.x + el.w <= 0 || el.y + el.h <= 0
+      if (outside) report('warning', `${at} is outside the ${project.meta.width} by ${project.meta.height} screen, so players will never see it.`)
+    }
+    if (leaving.length > 0 && shownByBlock.has(def.id) && !endingScreens.has(def.id)) {
+      report(
+        'warning',
+        `${where} is shown with a Show screen block but has "Leave screen" elements (${leaving.join(', ')}). Leave screen only works when this screen is the ending of a scene; with Show screen it will be ignored.`
+      )
+    }
+    if (endingScreens.has(def.id) && def.elements.some((el) => actionOf(el)?.type === 'hideThis')) {
+      report('warning', `${where} is the ending of a scene and has a "Close this screen" element. That only closes a screen shown with a Show screen block, so on an ending it does nothing.`)
     }
   }
 

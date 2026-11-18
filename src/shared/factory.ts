@@ -19,8 +19,13 @@ import type {
   Project,
   Scalar,
   Scene,
+  ScreenAction,
+  ScreenDef,
+  ScreenElement,
+  ScreenElementType,
   Variable
 } from './model'
+import { slugify } from './naming'
 
 export const newId = (): Id => nanoid(10)
 
@@ -109,6 +114,8 @@ export function createBlock(type: CreatableBlockType): Block {
       return { id, type, prompt: null, options: [createInlineOption(), createInlineOption()] }
     case 'code':
       return { id, type, code: '' }
+    case 'screen':
+      return { id, type, action: 'show', screenId: null }
   }
 }
 
@@ -204,4 +211,63 @@ export function createKitBlock(kitId: string, blockType: string, params: Record<
 /** A kit ending; its exits come from syncKitExits. */
 export function createKitEnding(kitId: string, endingType: string, params: Record<string, unknown>, exits: NamedExit[] = []): Ending {
   return { type: 'kit', kitId, endingType, params, exits }
+}
+
+export function createScreen(name = 'New screen'): ScreenDef {
+  return { id: newId(), name, modal: false, elements: [] }
+}
+
+/** The names the Properties panel starts new elements with. */
+export const ELEMENT_LABELS: Record<ScreenElementType, string> = {
+  image: 'image',
+  text: 'text',
+  button: 'button',
+  imageButton: 'image button',
+  hotspot: 'hotspot',
+  bar: 'bar'
+}
+
+/** The size a new element starts with, in game pixels. */
+export const ELEMENT_DEFAULT_SIZE: Record<ScreenElementType, { w: number; h: number }> = {
+  image: { w: 400, h: 300 },
+  text: { w: 300, h: 50 },
+  button: { w: 220, h: 60 },
+  imageButton: { w: 200, h: 100 },
+  hotspot: { w: 200, h: 150 },
+  bar: { w: 300, h: 24 }
+}
+
+export function createScreenAction(type: ScreenAction['type'] = 'leave'): ScreenAction {
+  switch (type) {
+    case 'leave':
+      return { type }
+    case 'setVariable':
+      return { type, effect: createEffect() }
+    case 'showScreen':
+      return { type, screenId: null }
+    case 'hideThis':
+      return { type }
+  }
+}
+
+/** A new element of the given type with its top-left corner at (x, y). The name is unique among `takenNames` ("button 1", "button 2"…). */
+export function createScreenElement(type: ScreenElementType, x: number, y: number, takenNames: readonly string[] = []): ScreenElement {
+  const taken = new Set(takenNames.map((n) => slugify(n, 'element')))
+  let n = 1
+  while (taken.has(slugify(`${ELEMENT_LABELS[type]} ${n}`, 'element'))) n++
+  const box = { id: newId(), name: `${ELEMENT_LABELS[type]} ${n}`, x: Math.round(x), y: Math.round(y), ...ELEMENT_DEFAULT_SIZE[type] }
+  switch (type) {
+    case 'image':
+      return { ...box, type, assetId: null }
+    case 'text':
+      return { ...box, type, text: 'Text', size: 36, color: '#ffffff', fontAssetId: null }
+    case 'button':
+      return { ...box, type, text: 'Button', action: createScreenAction('leave') }
+    case 'imageButton':
+      return { ...box, type, idleAssetId: null, hoverAssetId: null, action: createScreenAction('leave') }
+    case 'hotspot':
+      return { ...box, type, action: createScreenAction('leave') }
+    case 'bar':
+      return { ...box, type, variableId: null, max: 10 }
+  }
 }

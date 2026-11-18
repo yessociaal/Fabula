@@ -472,6 +472,20 @@ screen office_desk():
     bar value VariableValue("trust", 10) xpos 40 ypos 40 xsize 300
 ```
 
+**As built (Phase 14), proven in Ren'Py 8.4.1 with `npm run test:screens`:** the example above is the shape, with these exact differences.
+
+- A game made with `generate_gui` has no `gui/button` or `gui/bar` images, and the default styles of a button and a bar fail to load them. So a designed screen never depends on them. A `textbutton` is written `textbutton "Go" xpos 200 ypos 500 xsize 220 ysize 60 background Solid("#3a3f4b") hover_background Solid("#4a5266") text_xalign 0.5 text_yalign 0.5 action …`; a `bar` is `bar value VariableValue("trust", 10) xpos 40 ypos 120 xsize 300 ysize 24 left_bar Solid("#7c9cff") right_bar Solid("#262a33")`. A hotspot is `button xpos … ypos … xsize … ysize … background None action …`.
+- `add` gets `xsize W ysize H` unless the picture's own size is known and equal; an image button is drawn at its picture's own size (the designer fills W and H from the picture); `text` gets `font "fonts/x.ttf"` last when a font is picked.
+- Pictures: a UI image goes to `images/ui/<name>.<ext>`, a background keeps `images/bg/bg <name>.<ext>`, a font goes to `fonts/<name>.<ext>`. Only files the screens use are copied.
+- Screen names: `slugify(name, "screen")`, with `_screen` added when the name is a reserved word or one of the standard screens of Ren'Py's template (`main_menu`, `say`, `preferences`…), then `_2`, `_3` for duplicates. Return values of Leave elements are `slugify(element name, "element")`, unique inside the screen. A chapter called "Interface" is written to `interface_2.rpy`.
+- Screens are written in `screenOrder`, two blank lines apart, to `interface.rpy`, which comes after the chapter files and before script files. The file is only written when there is a screen, and the exporter removes it (and its `.rpyc`) when the last screen is deleted. A screen with nothing to draw is `null`.
+- Text goes through `escapeSayText` (quotes, brackets, `%`).
+- **Leave screen**: always `Return("<name>")`. It only does something when the screen is the ending of a scene (`call screen` returns it). With a Show screen block it is ignored by Ren'Py, so the validator warns: "Leave screen only works when this screen is the ending of a scene; with Show screen it will be ignored", unless the screen is also used as an ending. "Close this screen" (`Hide()`) on an ending screen does nothing in the game, so that is a warning too.
+- A screen ending with one leaving element is `call screen x` then a bare `jump`; with more it is an `if _return == "name":` / `elif` chain with one `jump` each. A screen with no leaving element is a validation error.
+- Quick play draws screens for real over the stage, scaled with it. A screen with "Blocks clicks behind" (`modal True`) stops the click that would advance the dialogue. Leave in a block context does nothing; "Close this screen" on the ending screen does nothing.
+- The Screen Designer's backdrop (a background to line things up with) is editor-only: it is kept in the browser's local storage per screen, never in the story file, and never exported.
+- The real-engine check is `npm run test:screens`: Ren'Py's test framework posts real mouse clicks at game coordinates (the framework's `click "text"` form cannot find a hotspot, and fails while the say screen is up). Its test file defines an empty `label main_menu`, because a generate_gui game cannot draw its main menu.
+
 Actions: `leave` → `Return("<slug>")`; `setVariable` → `SetVariable("x", V)` (add/subtract → `SetVariable("x", x + N)`, toggle → `ToggleVariable("x")`); `showScreen` → `Show("name")`; `hideThis` → `Hide()`.
 
 ### 6.7 Kits (Phase 13) — how the editor is extended without changing it

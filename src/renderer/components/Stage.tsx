@@ -1,11 +1,12 @@
 import { useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { Film, Music, Waves } from 'lucide-react'
-import type { Asset, Character, Id } from '@shared/model'
+import type { Asset, Character, Id, ScreenDef } from '@shared/model'
 import { PRESET_XALIGN, clamp01 } from '@shared/placement'
 import type { StageState } from '@shared/stage'
 import { parseRichText } from '@shared/richText'
 import { resolveSprites, type ResolvedSprite, type StageDialogue } from '@shared/stageView'
 import { api } from '../api'
+import { ScreenView } from './ScreenView'
 import './stage.css'
 
 export interface StageMenuOption {
@@ -45,6 +46,15 @@ export interface StageProps {
   ask?: { prompt: string; defaultText: string; maxLength: number } | null
   onAnswer?: (text: string) => void
   drag?: StageDrag | null
+  /** Quick play: designed screens drawn for real over the stage (absolute positions, scaled with the stage). Each is clickable. */
+  screens?: {
+    defs: ScreenDef[]
+    width: number
+    height: number
+    values?: Record<Id, boolean | number | string>
+    variableNames?: Record<Id, string>
+    onElementClick: (screenId: Id, elementId: Id) => void
+  } | null
   className?: string
 }
 
@@ -134,6 +144,7 @@ export function Stage({
   ask,
   onAnswer,
   drag,
+  screens,
   className
 }: StageProps) {
   const background = stage.background ? (assets[stage.background] ?? null) : null
@@ -256,6 +267,17 @@ export function Stage({
           </div>
         </div>
       )}
+      {screens &&
+        screens.defs.map((def) => (
+          <ScreenView
+            key={def.id}
+            def={def}
+            width={screens.width}
+            height={screens.height}
+            ctx={{ assets, dir, values: screens.values, variableNames: screens.variableNames }}
+            onElementClick={(elementId) => screens.onElementClick(def.id, elementId)}
+          />
+        ))}
       {movie && (
         <div className="stage-movie" role="status">
           <Film size={28} aria-hidden />

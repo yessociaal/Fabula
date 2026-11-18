@@ -588,7 +588,27 @@
         "y": 300
       },
       "chapterId": null,
-      "blocks": [],
+      "blocks": [
+        {
+          "id": "sc01",
+          "type": "screen",
+          "action": "show",
+          "screenId": "scr_note"
+        },
+        {
+          "id": "sc02",
+          "type": "say",
+          "characterId": null,
+          "text": "The note is on screen.",
+          "voiceAssetId": null
+        },
+        {
+          "id": "sc03",
+          "type": "screen",
+          "action": "hide",
+          "screenId": "scr_note"
+        }
+      ],
       "ending": {
         "type": "jump",
         "target": "s_extras"
@@ -1110,6 +1130,84 @@
       },
       "labelLock": null,
       "role": "normal"
+    },
+    "s_office": {
+      "id": "s_office",
+      "name": "Office",
+      "notes": "",
+      "position": {
+        "x": 0,
+        "y": 1000
+      },
+      "chapterId": null,
+      "blocks": [
+        {
+          "id": "of01",
+          "type": "say",
+          "characterId": null,
+          "text": "You are in the office.",
+          "voiceAssetId": null
+        }
+      ],
+      "ending": {
+        "type": "screen",
+        "screenId": "scr_desk",
+        "targets": {
+          "e_door": "s_vault",
+          "e_drawer": "s_drawer",
+          "e_window": "s_window"
+        }
+      },
+      "labelLock": null,
+      "role": "normal"
+    },
+    "s_drawer": {
+      "id": "s_drawer",
+      "name": "Drawer",
+      "notes": "",
+      "position": {
+        "x": 0,
+        "y": 1100
+      },
+      "chapterId": null,
+      "blocks": [
+        {
+          "id": "dr01",
+          "type": "say",
+          "characterId": null,
+          "text": "A brass key lies in the drawer.",
+          "voiceAssetId": null
+        }
+      ],
+      "ending": {
+        "type": "end"
+      },
+      "labelLock": null,
+      "role": "normal"
+    },
+    "s_window": {
+      "id": "s_window",
+      "name": "Window",
+      "notes": "",
+      "position": {
+        "x": 0,
+        "y": 1200
+      },
+      "chapterId": null,
+      "blocks": [
+        {
+          "id": "wi01",
+          "type": "say",
+          "characterId": null,
+          "text": "Rain taps on the window.",
+          "voiceAssetId": null
+        }
+      ],
+      "ending": {
+        "type": "end"
+      },
+      "labelLock": null,
+      "role": "normal"
     }
   },
   "chapters": {
@@ -1401,8 +1499,173 @@
       "bytes": 70
     }
   },
-  "screens": {},
-  "screenOrder": [],
+  "screens": {
+    "scr_desk": {
+      "id": "scr_desk",
+      "name": "Office desk",
+      "modal": true,
+      "elements": [
+        {
+          "id": "e_backdrop",
+          "name": "Backdrop",
+          "x": 0,
+          "y": 0,
+          "w": 1280,
+          "h": 720,
+          "type": "image",
+          "assetId": "a_ui"
+        },
+        {
+          "id": "e_title",
+          "name": "Title",
+          "x": 100,
+          "y": 40,
+          "w": 600,
+          "h": 60,
+          "type": "text",
+          "text": "Where to \"look\"? 100%",
+          "size": 36,
+          "color": "#ffffff",
+          "fontAssetId": "a_font"
+        },
+        {
+          "id": "e_door",
+          "name": "Door",
+          "x": 200,
+          "y": 500,
+          "w": 220,
+          "h": 60,
+          "type": "button",
+          "text": "Open the door",
+          "action": {
+            "type": "leave"
+          }
+        },
+        {
+          "id": "e_lamp",
+          "name": "Lamp",
+          "x": 900,
+          "y": 200,
+          "w": 100,
+          "h": 100,
+          "type": "imageButton",
+          "idleAssetId": "a_ui",
+          "hoverAssetId": "a_ui",
+          "action": {
+            "type": "setVariable",
+            "effect": {
+              "variableId": "v_key",
+              "op": "set",
+              "value": true
+            }
+          }
+        },
+        {
+          "id": "e_drawer",
+          "name": "Drawer",
+          "x": 400,
+          "y": 300,
+          "w": 180,
+          "h": 120,
+          "type": "hotspot",
+          "action": {
+            "type": "leave"
+          }
+        },
+        {
+          "id": "e_window",
+          "name": "Window",
+          "x": 700,
+          "y": 300,
+          "w": 200,
+          "h": 150,
+          "type": "hotspot",
+          "action": {
+            "type": "leave"
+          }
+        },
+        {
+          "id": "e_trust_up",
+          "name": "Trust up",
+          "x": 50,
+          "y": 200,
+          "w": 120,
+          "h": 80,
+          "type": "hotspot",
+          "action": {
+            "type": "setVariable",
+            "effect": {
+              "variableId": "v_trust",
+              "op": "add",
+              "value": 1
+            }
+          }
+        },
+        {
+          "id": "e_note_btn",
+          "name": "Read note",
+          "x": 200,
+          "y": 600,
+          "w": 220,
+          "h": 60,
+          "type": "button",
+          "text": "Read the note",
+          "action": {
+            "type": "showScreen",
+            "screenId": "scr_note"
+          }
+        },
+        {
+          "id": "e_bar",
+          "name": "Trust bar",
+          "x": 40,
+          "y": 120,
+          "w": 300,
+          "h": 24,
+          "type": "bar",
+          "variableId": "v_trust",
+          "max": 10
+        }
+      ]
+    },
+    "scr_note": {
+      "id": "scr_note",
+      "name": "Note",
+      "modal": false,
+      "elements": [
+        {
+          "id": "n_text",
+          "name": "Note text",
+          "x": 500,
+          "y": 600,
+          "w": 500,
+          "h": 40,
+          "type": "text",
+          "text": "The key is in the drawer.",
+          "size": 28,
+          "color": "#ffff80",
+          "fontAssetId": null
+        },
+        {
+          "id": "n_close",
+          "name": "Close note",
+          "x": 500,
+          "y": 650,
+          "w": 200,
+          "h": 50,
+          "type": "button",
+          "text": "Close note",
+          "action": {
+            "type": "hideThis"
+          }
+        }
+      ]
+    }
+  },
+  "screenOrder": [
+    "scr_desk",
+    "scr_note"
+  ],
   "scriptFiles": [
     {
       "id": "sf_extras",

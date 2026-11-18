@@ -17,6 +17,11 @@ import type {
   Id,
   Project,
   Scene,
+  ScreenAction,
+  ScreenDef,
+  ScreenElement,
+  ScreenElementPatch,
+  ScreenElementType,
   Variable
 } from '@shared/model'
 import {
@@ -29,11 +34,15 @@ import {
   createNamedExit,
   createOption,
   createScene,
+  createScreen,
+  createScreenAction,
+  createScreenElement,
   createVariable,
   defaultValueFor,
   newId
 } from '@shared/factory'
 import { nextScriptFileName, scriptFileNameProblem } from '@shared/scriptFiles'
+import { freeElementName, screenUses, syncScreenTargets, type ScreenUse } from '@shared/screens'
 import { createKitBlock, createKitEnding } from '@shared/factory'
 import { defaultParams } from '@shared/kits/fields'
 import { syncKitExits } from '@shared/kits/exits'
@@ -57,6 +66,9 @@ import {
 
 /** What a script file action reports: the file's id, or the reason it was refused (shown as a message next to the name). */
 export type ScriptFileResult = { ok: true; id: Id } | { ok: false; error: string }
+
+/** What deleting a screen reports: done, or refused because something still uses it (the places are listed). */
+export type DeleteScreenResult = { ok: true } | { ok: false; uses: ScreenUse[] }
 
 /** What a block action reports: the new block's id (when there is one), or a message the UI shows as a toast. */
 export type BlockResult = { ok: true; id: Id | null } | { ok: false; error: string }
@@ -169,6 +181,34 @@ export interface ProjectState {
   updateScriptFile(fileId: Id, content: string): void
   deleteScriptFile(fileId: Id): void
 
+  /** Screens made in the Screen Designer. Every action below is one undo step. */
+  addScreen(name?: string): Id
+  renameScreen(screenId: Id, name: string): void
+  /** Change the screen's own settings (its name, "Blocks clicks behind"). */
+  updateScreen(screenId: Id, patch: Partial<Pick<ScreenDef, 'name' | 'modal'>>): void
+  /** A copy with fresh ids, named "<name> copy", placed after the original. Returns its id. */
+  duplicateScreen(screenId: Id): Id | null
+  /**
+   * Delete a screen. Refused (with the list of what uses it: Show/Hide screen blocks, screen endings, "Show screen" actions) unless
+   * `removeReferences` is true, which empties every one of those first.
+   */
+  deleteScreen(screenId: Id, options?: { removeReferences?: boolean }): DeleteScreenResult
+  /** Add an element of this type with its top-left corner at (x, y). It gets a unique readable name ("button 1"). Returns its id. */
+  addElement(screenId: Id, type: ScreenElementType, x: number, y: number): Id | null
+  /** Change an element: position, size, or the properties of its type. The id and the type stay. Screen endings keep their targets in step. */
+  updateElement(screenId: Id, elementId: Id, patch: ScreenElementPatch): void
+  /** Change what an element does when clicked (the action must fit the element: image, text and bar have none). */
+  setElementAction(screenId: Id, elementId: Id, action: ScreenAction | ScreenAction['type']): void
+  /** Layer order: `toIndex` is the element's new position in the list (the last element is in front). */
+  moveElement(screenId: Id, elementId: Id, toIndex: number): void
+  deleteElement(screenId: Id, elementId: Id): void
+  /** The copy goes right above the original, 20 pixels down and right, named "<name> copy". Returns its id. */
+  duplicateElement(screenId: Id, elementId: Id): Id | null
+  /** Pick the screen of a screen ending. Targets are kept for elements the new screen shares and start empty for the others. */
+  setEndingScreen(sceneId: Id, screenId: Id | null): void
+  /** Where one leaving element of a scene's screen ending leads (null clears it). */
+  setScreenElementTarget(sceneId: Id, elementId: Id, targetId: Id | null): void
+
   addChapter(name?: string, color?: string): Id
   updateChapter(chapterId: Id, patch: Patch<Chapter>): void
   deleteChapter(chapterId: Id): void
@@ -207,6 +247,16 @@ function forEachEffect(project: Project, fn: (e: Effect) => void): void {
   for (const def of Object.values(project.screens)) {
     for (const el of def.elements) {
       if ('action' in el && el.action.type === 'setVariable') fn(el.action.effect)
+    }
+  }
+}
+
+/** After a screen changed: every scene that ends with it keeps one target per leaving element. */
+function syncEndings(p: Project, screenId: Id): void {
+  const def = p.screens[screenId]
+  for (const scene of Object.values(p.scenes)) {
+    if (scene.ending.type === 'screen' && scene.ending.screenId === screenId) {
+      scene.ending.targets = syncScreenTargets(def, scene.ending.targets)
     }
   }
 }
@@ -516,6 +566,9 @@ export const useProjectStore = create<ProjectState>()(
                 break
               case 'end':
                 s.ending = { type: 'end' }
+                break
+              case 'screen':
+                s.ending = { type: 'screen', screenId: null, targets: {} }
                 break
               case 'code': {
                 const fromJump = s.ending.type === 'jump'
@@ -838,6 +891,152 @@ export const useProjectStore = create<ProjectState>()(
         deleteScriptFile(fileId) {
           mutate((p) => {
             p.scriptFiles = p.scriptFiles.filter((f) => f.id !== fileId)
+          })
+        },
+
+        // ----- screens -----
+        addScreen(name) {
+          const taken = new Set(Object.values(get().project?.screens ?? {}).map((s) => s.name.trim().toLowerCase()))
+          let label = name ?? 'New screen'
+          for (let n = 2; taken.has(label.trim().toLowerCase()); n++) label = `${name ?? 'New screen'} ${n}`
+          const def = createScreen(label)
+          mutate((p) => {
+            p.screens[def.id] = def
+            p.screenOrder.push(def.id)
+          })
+          return def.id
+        },
+        renameScreen(screenId, name) {
+          mutate((p) => {
+            const def = p.screens[screenId]
+            if (def) def.name = name
+          })
+        },
+        updateScreen(screenId, patch) {
+          mutate((p) => {
+            const def = p.screens[screenId]
+            if (!def) return
+            if (patch.name !== undefined) def.name = patch.name
+            if (patch.modal !== undefined) def.modal = patch.modal
+          })
+        },
+        duplicateScreen(screenId) {
+          const src = get().project?.screens[screenId]
+          if (!src) return null
+          const copy = cloneWithNewIds(JSON.parse(JSON.stringify(src)) as ScreenDef)
+          const taken = new Set(Object.values(get().project?.screens ?? {}).map((s) => s.name.trim().toLowerCase()))
+          let label = `${src.name} copy`
+          for (let n = 2; taken.has(label.trim().toLowerCase()); n++) label = `${src.name} copy ${n}`
+          copy.name = label
+          mutate((p) => {
+            p.screens[copy.id] = copy
+            const at = p.screenOrder.indexOf(screenId)
+            p.screenOrder.splice(at === -1 ? p.screenOrder.length : at + 1, 0, copy.id)
+          })
+          return copy.id
+        },
+        deleteScreen(screenId, options) {
+          const project = get().project
+          if (!project?.screens[screenId]) return { ok: true }
+          const uses = screenUses(project, screenId)
+          if (uses.length > 0 && !options?.removeReferences) return { ok: false, uses }
+          mutate((p) => {
+            for (const scene of Object.values(p.scenes)) {
+              eachBlock(scene.blocks, (b) => {
+                if (b.type === 'screen' && b.screenId === screenId) b.screenId = null
+              })
+              if (scene.ending.type === 'screen' && scene.ending.screenId === screenId) {
+                scene.ending.screenId = null
+                scene.ending.targets = {}
+              }
+            }
+            for (const def of Object.values(p.screens)) {
+              for (const el of def.elements) {
+                if ('action' in el && el.action.type === 'showScreen' && el.action.screenId === screenId) el.action.screenId = null
+              }
+            }
+            delete p.screens[screenId]
+            p.screenOrder = p.screenOrder.filter((id) => id !== screenId)
+          })
+          return { ok: true }
+        },
+        addElement(screenId, type, x, y) {
+          const def = get().project?.screens[screenId]
+          if (!def) return null
+          const el = createScreenElement(type, x, y, def.elements.map((e) => e.name))
+          mutate((p) => {
+            p.screens[screenId]?.elements.push(el)
+            syncEndings(p, screenId)
+          })
+          return el.id
+        },
+        updateElement(screenId, elementId, patch) {
+          mutate((p) => {
+            const el = p.screens[screenId]?.elements.find((e) => e.id === elementId)
+            if (!el) return
+            const { ...rest } = patch as Record<string, unknown>
+            delete rest.id
+            delete rest.type
+            for (const [key, value] of Object.entries(rest)) {
+              if (key in el || key === 'action') (el as unknown as Record<string, unknown>)[key] = value
+            }
+            syncEndings(p, screenId)
+          })
+        },
+        setElementAction(screenId, elementId, action) {
+          const next = typeof action === 'string' ? createScreenAction(action) : action
+          mutate((p) => {
+            const el = p.screens[screenId]?.elements.find((e) => e.id === elementId)
+            if (!el || !('action' in el)) return
+            el.action = next
+            syncEndings(p, screenId)
+          })
+        },
+        moveElement(screenId, elementId, toIndex) {
+          mutate((p) => {
+            const list = p.screens[screenId]?.elements
+            if (!list) return
+            const from = list.findIndex((e) => e.id === elementId)
+            if (from === -1) return
+            const [el] = list.splice(from, 1)
+            list.splice(Math.max(0, Math.min(toIndex, list.length)), 0, el)
+          })
+        },
+        deleteElement(screenId, elementId) {
+          mutate((p) => {
+            const def = p.screens[screenId]
+            if (!def) return
+            def.elements = def.elements.filter((e) => e.id !== elementId)
+            syncEndings(p, screenId)
+          })
+        },
+        duplicateElement(screenId, elementId) {
+          const def = get().project?.screens[screenId]
+          const src = def?.elements.find((e) => e.id === elementId)
+          if (!def || !src) return null
+          const copy = cloneWithNewIds(JSON.parse(JSON.stringify(src)) as ScreenElement)
+          copy.name = freeElementName(def, `${src.name} copy`)
+          copy.x = src.x + 20
+          copy.y = src.y + 20
+          mutate((p) => {
+            const list = p.screens[screenId]?.elements
+            if (!list) return
+            const at = list.findIndex((e) => e.id === elementId)
+            list.splice(at + 1, 0, copy)
+            syncEndings(p, screenId)
+          })
+          return copy.id
+        },
+        setEndingScreen(sceneId, screenId) {
+          mutateScene(sceneId, (s, p) => {
+            if (s.ending.type !== 'screen') return
+            s.ending.screenId = screenId
+            s.ending.targets = syncScreenTargets(screenId === null ? undefined : p.screens[screenId], s.ending.targets)
+          })
+        },
+        setScreenElementTarget(sceneId, elementId, targetId) {
+          mutateScene(sceneId, (s) => {
+            if (s.ending.type === 'screen') s.ending.targets[elementId] = targetId
           })
         },
 

@@ -80,9 +80,21 @@ export interface NameTable {
   stems: Record<Id, string>
   /** chapter id -> file name, e.g. "act_one.rpy" */
   chapterFiles: Record<Id, string>
+  /** screen id -> screen name, e.g. "office_desk" */
+  screens: Record<Id, string>
+  /** screen element id -> the value its Leave action returns (unique inside its screen), e.g. "drawer" */
+  screenElements: Record<Id, string>
 }
 
-const TAKEN_FILES = ['script', 'gui', 'screens', 'options']
+const TAKEN_FILES = ['script', 'gui', 'screens', 'options', 'interface']
+
+/** Screens that the standard Ren'Py project template (screens.rpy) defines. A designed screen must not take one of these names. */
+export const STANDARD_SCREENS: ReadonlySet<string> = new Set(
+  (
+    'say input choice quick_menu navigation main_menu game_menu about save load file_slots preferences history help confirm ' +
+    'skip_indicator notify nvl nvl_dialogue nvl_menu keyboard_help mouse_help gamepad_help bubble ctc'
+  ).split(' ')
+)
 
 const STEM_FALLBACK: Record<AssetKind, string> = {
   background: 'scene',
@@ -128,7 +140,9 @@ export function buildNameTable(project: Project): NameTable {
     expressions: {},
     backgrounds: {},
     stems: {},
-    chapterFiles: {}
+    chapterFiles: {},
+    screens: {},
+    screenElements: {}
   }
 
   // Scene labels. The start scene is always `start`; a splash screen scene is `splashscreen`;
@@ -201,6 +215,18 @@ export function buildNameTable(project: Project): NameTable {
     const ch = project.chapters[chid]
     if (!ch) continue
     table.chapterFiles[chid] = `${unique(slugify(ch.name, 'chapter'), files)}.rpy`
+  }
+
+  // Screens: their own namespace. A name that Ren'Py's standard screens (or a reserved word) already use gets "_screen".
+  const screenNames = new Set<string>()
+  for (const sid of project.screenOrder) {
+    const def = project.screens[sid]
+    if (!def) continue
+    let slug = slugify(def.name, 'screen')
+    if (RESERVED_WORDS.has(slug) || STANDARD_SCREENS.has(slug)) slug += '_screen'
+    table.screens[sid] = unique(slug, screenNames)
+    const returns = new Set<string>()
+    for (const el of def.elements) table.screenElements[el.id] = unique(slugify(el.name, 'element'), returns)
   }
   return table
 }

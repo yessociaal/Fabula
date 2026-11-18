@@ -19,6 +19,8 @@ export interface UsageIndex {
   assets: Record<Id, UsageRef[]>
   characters: Record<Id, UsageRef[]>
   variables: Record<Id, UsageRef[]>
+  /** Where each designed screen is shown, used as an ending, or opened by another screen's element. */
+  screens: Record<Id, UsageRef[]>
 }
 
 export function countUsage(refs: UsageRef[] | undefined): number {
@@ -53,7 +55,7 @@ const short = (text: string, max = 28): string => {
  * because Fabula never reads inside code you wrote.
  */
 export function findUsage(project: Project, context: KitContext = {}): UsageIndex {
-  const index: UsageIndex = { assets: {}, characters: {}, variables: {} }
+  const index: UsageIndex = { assets: {}, characters: {}, variables: {}, screens: {} }
   const add = (map: Record<Id, UsageRef[]>, id: Id | null | undefined, ref: UsageRef): void => {
     if (!id) return
     ;(map[id] ??= []).push(ref)
@@ -134,6 +136,9 @@ export function findUsage(project: Project, context: KitContext = {}): UsageInde
             conditionUse(o.condition, base(`Choice option "${short(o.text)}"`, { blockId: b.id, optionId: o.id }))
           }
           break
+        case 'screen':
+          add(index.screens, b.screenId, at(`${b.action === 'show' ? 'Show' : 'Hide'} screen block`))
+          break
         case 'kit': {
           const kit = findKit(context, b.kitId)
           const def = findBlockDef(kit, b.blockType)
@@ -153,6 +158,8 @@ export function findUsage(project: Project, context: KitContext = {}): UsageInde
         conditionUse(o.condition, ref)
         for (const ef of o.effects) effectUse(ef, ref, 'changes it')
       }
+    } else if (e.type === 'screen') {
+      add(index.screens, e.screenId, base('Ending: screen'))
     } else if (e.type === 'kit') {
       const def = findEndingDef(findKit(context, e.kitId), e.endingType)
       kitUse(def?.fields, e.params, base(`Ending: ${def?.name ?? 'kit ending'}`))
@@ -183,6 +190,7 @@ export function findUsage(project: Project, context: KitContext = {}): UsageInde
       if ('action' in el && el.action.type === 'setVariable') {
         add(index.variables, el.action.effect.variableId, out(`${label}: changes it`))
       }
+      if ('action' in el && el.action.type === 'showScreen') add(index.screens, el.action.screenId, out(`${label}: shows it`))
     }
   }
 

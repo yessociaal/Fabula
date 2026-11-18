@@ -91,6 +91,12 @@ label start:
 
 label secret:
 
+    show screen note
+
+    "The note is on screen."
+
+    hide screen note
+
     jump extras
 
 
@@ -249,5 +255,33 @@ label server_room:
 label vault:
 
     "The vault door swings open."
+
+    return
+
+
+label office:
+
+    "You are in the office."
+
+    call screen office_desk
+
+    if _return == "door":
+        jump vault
+    elif _return == "drawer":
+        jump drawer
+    elif _return == "window":
+        jump window
+
+
+label drawer:
+
+    "A brass key lies in the drawer."
+
+    return
+
+
+label window:
+
+    "Rain taps on the window."
 
     return

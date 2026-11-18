@@ -94,7 +94,7 @@ async function main() {
     const manifest = JSON.parse(readFileSync(join(editor, 'export-manifest.json'), 'utf8'))
     check(manifest.files.includes('script.rpy') && !existsSync(join(gameDir, 'export-manifest.json')), 'manifest is in the editor folder, not the game')
     check(existsSync(join(editor, 'backups')), 'the template script.rpy was backed up')
-    for (const f of ['script.rpy', 'act_one.rpy', 'act_two.rpy', 'terminal.rpy']) {
+    for (const f of ['script.rpy', 'act_one.rpy', 'act_two.rpy', 'interface.rpy', 'terminal.rpy']) {
       const text = readFileSync(join(gameDir, 'game', f), 'utf8')
       check(!/^\s*#/m.test(text) && !/fabula|generated/i.test(text), `${f} has no comment and no tool name`)
     }
@@ -130,6 +130,11 @@ async function main() {
       existsSync(join(gameDir, 'game', 'images', 'characters', 'side nova.png')) && existsSync(join(gameDir, 'game', 'movies', 'intro.webm')),
       'the side image and the movie file were copied into the game'
     )
+
+    const iface = join(gameDir, 'game', 'interface.rpy')
+    check(existsSync(iface) && readFileSync(iface, 'utf8').includes('screen office_desk():') && manifest.files.includes('interface.rpy'), 'interface.rpy holds the designed screens and is listed in the export manifest')
+    check(script.includes('    call screen office_desk\n\n    if _return == "door":\n        jump vault\n'), 'the Office scene ends with call screen and one jump per leaving element')
+    check(existsSync(join(gameDir, 'game', 'images', 'ui', 'desk.png')) && existsSync(join(gameDir, 'game', 'fonts', 'handwriting.ttf')), 'the interface picture and the font were copied into the game')
 
     // 3. lint
     t = Date.now()
@@ -179,7 +184,9 @@ async function main() {
       ['s_cellar', 'the sub-scene itself'],
       ['s_code', 'the scene with the code block (it shows the screen from the script file)'],
       ['s_fork', 'the scene with the code ending (two named exits)'],
-      ['s_terminal', 'the Terminal scene (a kit block, then a Terminal session ending with two leaving commands)']
+      ['s_terminal', 'the Terminal scene (a kit block, then a Terminal session ending with two leaving commands)'],
+      ['s_office', 'the Office scene (it ends with the designed screen: a button, two hotspots, an image button, a bar and a second screen)'],
+      ['s_secret', 'the Secret scene (a Show screen block puts the Note screen on top of the dialogue)']
     ]) {
       const loc = second.sceneLocations[id]
       const w = { file: loc.file, line: loc.line + 1 }
