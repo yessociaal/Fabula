@@ -4,7 +4,17 @@ Fabula is a Windows desktop editor for visual novels. You draw the story as a ma
 
 It needs a Ren'Py SDK (8.4.1 was used) to create the game folder, play it, check it and build it for sharing. Fabula makes no network calls, has no telemetry and ships no art or sound: every picture and track in your game is a file you added.
 
-## Run it
+## Install it (easiest)
+
+Download the Windows installer, run it, and start Fabula from the Start menu. You do not need Node.js or npm for this:
+
+https://drive.google.com/file/d/1dESsIi-TpjWDl3vy64LYgnvYm8514Ku-/view?usp=sharing
+
+You still need a Ren'Py SDK (see above) to create, play and build the game.
+
+## Run it from source
+
+You only need this if you want to change Fabula itself. First install [Node.js](https://nodejs.org) (the LTS version; version 24 was used) and open a new Command Prompt so `node -v` and `npm -v` work. Then, from inside the project folder (the one containing `package.json`):
 
 ```
 npm install
